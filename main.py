@@ -30,7 +30,7 @@ tile_images = {
     'wall': load_image('box.png'),
     'empty': load_image('grass.png')
 }
-player_image = load_image('mar.png')
+player_image = pygame.transform.scale(load_image('mar.png'), (tile_width, tile_height))
 monster_image = pygame.transform.scale(load_image('hero.png'), (tile_width, tile_height))
 FPS = 50
 
@@ -112,11 +112,12 @@ class Empty: # класс пустоты для матрицы
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         super().__init__(player_group, all_sprites, entity_group)
-        self.health = 100 #здоровье пока не реализовано
+        self.hp = 8
+        self.hp_max = 10
         self.pos_x, self.pos_y = pos_x, pos_y #координаты игрока в клетках
         self.image = player_image
         self.rect = self.image.get_rect().move(
-            tile_width * pos_x + 15, tile_height * pos_y + 5)
+            tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
 
     def update(self, x_move, y_move):
@@ -141,7 +142,8 @@ class Player(pygame.sprite.Sprite):
 
 class Monster(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
-        self.health = 100
+        self.hp = 10
+        self.hp_max = 10
         self.pos_x, self.pos_y = pos_x, pos_y
         super().__init__(monster_group, all_sprites, entity_group)
         self.image = monster_image
@@ -235,22 +237,17 @@ class Board: #класс матрицы доски
                 matrix = [list(map(lambda x: False if x.type() in ['wall'] else -1, i)) for i in self.table]
                 matrix[x1][y1] = 1
                 while matrix[x2][y2] == -1:
-                    flag = False
                     for x in range(self.width):
                         for y in range(self.height):
                             if matrix[x][y] == n:
                                 if 0 <= x - 1 < self.width and 0 <= y < self.height and matrix[x - 1][y] == -1:
                                     matrix[x - 1][y] = n + 1
-                                    flag = True
                                 if 0 <= x + 1 < self.width and 0 <= y < self.height and matrix[x + 1][y] == -1:
                                     matrix[x + 1][y] = n + 1
-                                    flag = True
                                 if 0 <= x < self.width and 0 <= y - 1 < self.height and matrix[x][y - 1] == -1:
                                     matrix[x][y - 1] = n + 1
-                                    flag = True
                                 if 0 <= x < self.width and 0 <= y + 1 < self.height and matrix[x][y + 1] == -1:
                                     matrix[x][y + 1] = n + 1
-                                    flag = True
         #print(*matrix, sep='\n')
         x, y = x2, y2
         lst = [(x, y)]
@@ -266,6 +263,17 @@ class Board: #класс матрицы доски
             lst.append((x, y))
             n -= 1
         return lst[::-1]
+
+def draw_hp(entity):
+    pygame.draw.rect(screen, (255, 0, 0), (entity.rect.x, entity.rect.y - 20,
+                                           int(tile_width * (entity.hp / entity.hp_max)), 15))
+    pygame.draw.rect(screen, (0, 0, 0), (entity.rect.x, entity.rect.y - 20,
+                                           tile_width, 15), 2)
+    font = pygame.font.Font(None, 20)
+    text = font.render(str(entity.hp), True, pygame.Color('white'))
+    screen.blit(text, (entity.rect.x, entity.rect.y - text.get_height() - 20))
+
+
 
 running = True
 pos = None
@@ -301,6 +309,8 @@ while running:
     screen.fill((255, 255, 255))
     tiles_group.draw(screen) #спрайты клеток и сущности рисуются отдельно, чтобы спрайты клеток не наслаивались на сущностей
     entity_group.draw(screen)
+    for i in entity_group:
+        draw_hp(i)
     clock.tick(FPS)
     pygame.display.flip()
 # создадим группу, содержащую все спрайты
