@@ -13,7 +13,7 @@ tiles_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 wall_group = pygame.sprite.Group()
 monster_group = pygame.sprite.Group()
-entity_group = pygame.sprite.Group()
+entity_group = pygame.sprite.Group() #игроки и мобы
 
 
 def load_image(name, colorkey=None):
@@ -82,7 +82,7 @@ def load_level(filename):
     return list(map(lambda x: x.ljust(max_width, '.'), level_map))
 
 
-class BackgroundTile(pygame.sprite.Sprite):
+class BackgroundTile(pygame.sprite.Sprite): #класс фоновой картинки, пришлось разделить его и класс стены
     def __init__(self, pos_x, pos_y):
         super().__init__(tiles_group, all_sprites)
         self.image = tile_images['empty']
@@ -91,7 +91,7 @@ class BackgroundTile(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
 
 
-class Wall(pygame.sprite.Sprite):
+class Wall(pygame.sprite.Sprite): #класс стены
     def __init__(self, pos_x, pos_y):
         super().__init__(tiles_group, all_sprites, wall_group)
         self.image = tile_images['wall']
@@ -99,10 +99,10 @@ class Wall(pygame.sprite.Sprite):
             tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
 
-    def type(self):
+    def type(self): # возвращает строку типа спрайта, нужно для использования спрайтов в матрице
         return 'wall'
 
-class Empty:
+class Empty: # класс пустоты для матрицы
     def __init__(self):
         pass
 
@@ -112,8 +112,8 @@ class Empty:
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         super().__init__(player_group, all_sprites, entity_group)
-        self.health = 100
-        self.pos_x, self.pos_y = pos_x, pos_y
+        self.health = 100 #здоровье пока не реализовано
+        self.pos_x, self.pos_y = pos_x, pos_y #координаты игрока в клетках
         self.image = player_image
         self.rect = self.image.get_rect().move(
             tile_width * pos_x + 15, tile_height * pos_y + 5)
@@ -124,14 +124,14 @@ class Player(pygame.sprite.Sprite):
         self.rect.y += y_move * tile_height
         self.pos_x += x_move
         self.pos_y += y_move
-        for i in wall_group:
+        for i in wall_group: #проверка на столкновение со стенами
             if pygame.sprite.collide_mask(self, i):
                 self.rect.x -= x_move * tile_width
                 self.rect.y -= y_move * tile_height
                 self.pos_x -= x_move
                 self.pos_y -= y_move
                 return True
-        for i in monster_group:
+        for i in monster_group: #проверка на столкновение с монстрами
             if pygame.sprite.collide_mask(self, i):
                 self.rect.x -= x_move * tile_width
                 self.rect.y -= y_move * tile_height
@@ -154,7 +154,7 @@ class Monster(pygame.sprite.Sprite):
 
     def update(self):
         path = board.get_path(self.pos_x, self.pos_y, player.pos_x, player.pos_y)
-        if not len(path) == 2 and abs(self.pos_x - player.pos_x) <= 5 and abs(self.pos_y - player.pos_y) <= 5:
+        if not len(path) == 2 and board[path[1][0]][path[1][1]].type() == 'empty' and abs(self.pos_x - player.pos_x) <= 5 and abs(self.pos_y - player.pos_y) <= 5:
             self.rect.x += tile_width * (path[1][0] - self.pos_x)
             self.rect.y += tile_height * (path[1][1] - self.pos_y)
             board[path[1][0]][path[1][1]] = self
@@ -168,7 +168,7 @@ def generate_level(level):
     for y in range(len(level)):
         for x in range(len(level[y])):
             if level[y][x] == '.':
-                BackgroundTile(x, y)
+                BackgroundTile(x, y) # фоновые спрайты не добавляются в матрицу, потому что они наслаивались бы друг на друга и засоряли экран
                 table[x].append(Empty())
             elif level[y][x] == '#':
                 table[x].append(Wall(x, y))
@@ -176,7 +176,7 @@ def generate_level(level):
                 BackgroundTile(x, y)
                 new_player = Player(x, y)
                 table[x].append(Empty())
-            elif level[y][x] == '1':
+            elif level[y][x] == '1': #монстер обозначается цифрой 1, при добавлнии новых монстров будет 2, 3 и тд
                 BackgroundTile(x, y)
                 table[x].append(Monster(x, y))
     # вернем игрока, а также размер поля в клетках
@@ -199,16 +199,16 @@ class Camera:
         self.dx = -(target.rect.x + target.rect.w // 2 - WIDTH // 2)
         self.dy = -(target.rect.y + target.rect.h // 2 - HEIGHT // 2)
 
-class Board:
+class Board: #класс матрицы доски
     def __init__(self, table):
-        self.table = table
+        self.table = table #сама матрица
         self.width = len(table)
         self.height = len(table[0])
 
-    def __getitem__(self, item):
+    def __getitem__(self, item): #индексирование матрицы
         return self.table[item]
 
-    def get_path(self, x1, y1, x2, y2):
+    def get_path(self, x1, y1, x2, y2): #поиск пути
         n = 1
         matrix = [list(map(lambda x: False if x.type() in ['wall', 'monster'] else -1, i)) for i in self.table]
         matrix[x1][y1] = 1
@@ -231,7 +231,26 @@ class Board:
                             flag = True
             n += 1
             if not flag:
-                return False
+                n = 1
+                matrix = [list(map(lambda x: False if x.type() in ['wall'] else -1, i)) for i in self.table]
+                matrix[x1][y1] = 1
+                while matrix[x2][y2] == -1:
+                    flag = False
+                    for x in range(self.width):
+                        for y in range(self.height):
+                            if matrix[x][y] == n:
+                                if 0 <= x - 1 < self.width and 0 <= y < self.height and matrix[x - 1][y] == -1:
+                                    matrix[x - 1][y] = n + 1
+                                    flag = True
+                                if 0 <= x + 1 < self.width and 0 <= y < self.height and matrix[x + 1][y] == -1:
+                                    matrix[x + 1][y] = n + 1
+                                    flag = True
+                                if 0 <= x < self.width and 0 <= y - 1 < self.height and matrix[x][y - 1] == -1:
+                                    matrix[x][y - 1] = n + 1
+                                    flag = True
+                                if 0 <= x < self.width and 0 <= y + 1 < self.height and matrix[x][y + 1] == -1:
+                                    matrix[x][y + 1] = n + 1
+                                    flag = True
         #print(*matrix, sep='\n')
         x, y = x2, y2
         lst = [(x, y)]
@@ -280,7 +299,7 @@ while running:
     for sprite in all_sprites:
         camera.apply(sprite)
     screen.fill((255, 255, 255))
-    tiles_group.draw(screen)
+    tiles_group.draw(screen) #спрайты клеток и сущности рисуются отдельно, чтобы спрайты клеток не наслаивались на сущностей
     entity_group.draw(screen)
     clock.tick(FPS)
     pygame.display.flip()
