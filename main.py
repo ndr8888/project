@@ -1,6 +1,7 @@
 import pygame
 import os
 import sys
+import random
 
 map_name = 'map.txt'
 clock = pygame.time.Clock()
@@ -151,7 +152,7 @@ class Player(pygame.sprite.Sprite):
         super().__init__(player_group, all_sprites, entity_group)
         self.hp = 8
         self.hp_max = 10
-        self.diagonal = False
+        self.diagonal = False #переменная, нужная для диагонального хода игроком
         self.pos_x, self.pos_y = pos_x, pos_y  # координаты игрока в клетках
         self.image = player_image
         self.rect = self.image.get_rect().move(
@@ -207,20 +208,6 @@ class Player(pygame.sprite.Sprite):
                 self.pos_y += self.y_move
                 board[self.pos_x][self.pos_y] = player
                 self.y_move = 0
-        # for i in wall_group:  # проверка на столкновение со стенами
-        #     if pygame.sprite.collide_mask(self, i):
-        #         self.rect.x -= self.x_move * (tile_width / self.timer_x.time_max)
-        #         self.rect.y -= self.y_move * (tile_width / self.timer_x.time_max)
-        #         self.timer_x.stop()
-        #         self.timer_y.stop()
-        #         self.x_move, self.y_move = 0, 0
-        # for i in monster_group:  # проверка на столкновение с монстрами
-        #     if pygame.sprite.collide_mask(self, i):
-        #         self.rect.x -= self.x_move * (tile_width / self.timer_x.time_max)
-        #         self.rect.y -= self.y_move * (tile_width / self.timer_x.time_max)
-        #         self.timer_x.stop()
-        #         self.timer_y.stop()
-        #         self.x_move, self.y_move = 0, 0
 
 
 class Monster(pygame.sprite.Sprite):
@@ -246,17 +233,27 @@ class Monster(pygame.sprite.Sprite):
 
     def update(self):
         if int(self.timer_x) == 0 and int(self.timer_y) == 0:
-            print(1)
             path = board.get_path(self.pos_x, self.pos_y, player.pos_x, player.pos_y)
-            print(2)
             next_cell = path[1]
-            if board[next_cell[0]][next_cell[1]].type() == 'empty' and not len(path) == 2 and board[next_cell[0]][
-                    next_cell[1]].type() == 'empty' and self.rang_min <= abs(
-                        self.pos_x - player.pos_x) <= self.rang_max and self.rang_min <= abs(
+            if board[next_cell[0]][next_cell[1]].type() == 'empty' and abs(
+                        self.pos_x - player.pos_x) <= self.rang_max and abs(
                     self.pos_y - player.pos_y) <= self.rang_max:
-                self.next_cell = path[1]
-                x_move, y_move = self.next_cell[0] - self.pos_x, self.next_cell[1] - self.pos_y
-
+                if self.rang_min <= abs(self.pos_x - player.pos_x) or self.rang_min <= abs(
+                    self.pos_y - player.pos_y):
+                    self.next_cell = next_cell
+                    x_move, y_move = self.next_cell[0] - self.pos_x, self.next_cell[1] - self.pos_y
+                elif board[self.pos_x - (next_cell[0] - self.pos_x)][self.pos_y - (next_cell[1] - self.pos_y)].type() == 'empty' and not (abs(
+                        self.pos_x - player.pos_x) == self.rang_min - 1 or abs(
+                        self.pos_y - player.pos_y) == self.rang_min - 1):
+                    self.next_cell = [self.pos_x - (next_cell[0] - self.pos_x), self.pos_y - (next_cell[1] - self.pos_y)]
+                    x_move, y_move = -(next_cell[0] - self.pos_x), -(next_cell[1] - self.pos_y)
+                # elif (abs(self.pos_x - player.pos_x) == self.rang_min - 1 or abs(self.pos_y - player.pos_y) == self.rang_min - 1) and board[self.pos_x + (next_cell[1] - self.pos_y)][self.pos_y + (next_cell[0] - self.pos_x)].type() == 'empty':
+                #     x_move, y_move = next_cell[1] - self.pos_y, next_cell[0] - self.pos_x
+                #     self.next_cell = [self.pos_x + (next_cell[1] - self.pos_y), self.pos_y + (next_cell[0] - self.pos_x)]
+                #     print(x_move, y_move)
+                else:
+                    print(board[self.pos_x - (self.next_cell[0] - self.pos_x)][self.pos_y - (self.next_cell[1] - self.pos_y)].type())
+                    x_move, y_move = 0, 0
                 if self.x_move == 0 and x_move != 0:
                     self.x_move = x_move
                     self.timer_x.start()
@@ -360,7 +357,6 @@ class Board:  # класс матрицы доски
                 matrix = [list(map(lambda x: False if x.type() in ['wall'] else -1, i)) for i in self.table]
                 matrix[x1][y1] = 1
                 while matrix[x2][y2] == -1:
-                    print(3)
                     for x in range(self.width):
                         for y in range(self.height):
                             if matrix[x][y] == n:
