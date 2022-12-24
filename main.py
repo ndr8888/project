@@ -2,6 +2,7 @@ import pygame
 import os
 import sys
 import random
+import math
 
 map_name = 'map.txt'
 clock = pygame.time.Clock()
@@ -15,6 +16,7 @@ player_group = pygame.sprite.Group()
 wall_group = pygame.sprite.Group()
 monster_group = pygame.sprite.Group()
 entity_group = pygame.sprite.Group()  # игроки и мобы
+attack_group = pygame.sprite.Group()
 
 
 class Timer:
@@ -49,7 +51,8 @@ def load_image(name, colorkey=None):
 
 tile_images = {
     'wall': pygame.transform.scale(load_image('box.png'), (tile_width, tile_height)),
-    'empty': pygame.transform.scale(load_image('grass.png'), (tile_width, tile_height))
+    'empty': pygame.transform.scale(load_image('grass.png'), (tile_width, tile_height)),
+    'bullet': pygame.transform.scale(load_image('bomb2.png'), (30, 30))
 }
 player_image = pygame.transform.scale(load_image('mar.png'), (tile_width, tile_height))
 monster_image = pygame.transform.scale(load_image('hero.png'), (tile_width, tile_height))
@@ -209,6 +212,11 @@ class Player(pygame.sprite.Sprite):
                 board[self.pos_x][self.pos_y] = player
                 self.y_move = 0
 
+    def damage(self, n):
+        self.hp -= n
+        if self.hp <= 0:
+            self.kill()
+
 
 class Monster(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
@@ -225,7 +233,7 @@ class Monster(pygame.sprite.Sprite):
             tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
         self.rang_min = 0
-        self.rang_max = 5
+        self.rang_max = 0
         self.next_cell = 0, 0
 
     def type(self):
@@ -252,7 +260,6 @@ class Monster(pygame.sprite.Sprite):
                 #     self.next_cell = [self.pos_x + (next_cell[1] - self.pos_y), self.pos_y + (next_cell[0] - self.pos_x)]
                 #     print(x_move, y_move)
                 else:
-                    print(board[self.pos_x - (self.next_cell[0] - self.pos_x)][self.pos_y - (self.next_cell[1] - self.pos_y)].type())
                     x_move, y_move = 0, 0
                 if self.x_move == 0 and x_move != 0:
                     self.x_move = x_move
@@ -280,6 +287,64 @@ class Monster(pygame.sprite.Sprite):
                 self.pos_y += self.y_move
                 self.y_move = 0
 
+    def damage(self, n):
+        self.hp -= n
+        if self.hp <= 0:
+            board[self.next_cell[0]][self.next_cell[1]] = Empty()
+            board[self.pos_x][self.pos_y] = Empty()
+            self.kill()
+
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, x1, y1, x2, y2, sender):
+        super().__init__(all_sprites, attack_group)
+        self.image = tile_images['bullet']
+        self.rect = self.image.get_rect().move(x1, y1)
+        self.mask = pygame.mask.from_surface(self.image)
+        self.x1, self.y1, self.x2, self.y2 = x1, y1, x2, y2
+        self.sender = sender
+        self.vel = 10
+        self.dmg = 1
+        if x1 != x2 and y1 != y2:
+            self.straight_mode = False
+            self.dirs = [(1 if x1 - x2 < 0 else -1, 0), (0, 1 if y1 - y2 < 0 else -1)]
+            self.coof = (x1 - x2) / (y1 - y2)
+        else:
+            self.straight_mode = True
+            self.dirs = [0, 0]
+            if x1 < x2:
+                self.dirs[0] += self.vel
+            elif x1 > x2:
+                self.dirs[0] -= self.vel
+            if y1 < y2:
+                self.dirs[1] += self.vel
+            elif y1 > y2:
+                self.dirs[1] -= self.vel
+
+    def update(self):
+        if not self.straight_mode:
+            for i in range(self.vel):
+                old_x, old_y = self.x1, self.y1
+                coofs = []
+                for i in self.dirs:
+                    coofs.append([i, ((self.x1 + i[0] - self.x2) / (self.y1 + i[1] - self.y2)) if (self.y1 + i[1] - self.y2) != 0 else math.inf])
+                coofs.sort(key=lambda x: abs(self.coof - x[1]))
+                if (self.x2, self.y2) in list(map(lambda a: (self.x1 + a[0][0], self.y1 + a[0][1]), coofs)):
+                    self.x1, self.y1 = self.x2, self.y2
+                else:
+                    self.x1 += coofs[0][0][0]
+                    self.y1 += coofs[0][0][1]
+                self.rect.x += self.x1 - old_x
+                self.rect.y += self.y1 - old_y
+        else:
+            self.rect.x += self.dirs[0]
+            self.rect.y += self.dirs[1]
+        for i in entity_group:  # проверка на столкновение с монстрами
+            if pygame.sprite.collide_mask(self, i) and i != self.sender:
+                i.damage(self.dmg)
+                self.kill()
+        for i in wall_group:  # проверка на столкновение со стенами
+            if pygame.sprite.collide_mask(self, i):
+                self.kill()
 
 def generate_level(level):
     new_player, x, y = None, None, None
@@ -401,7 +466,9 @@ pos = None
 board, player, level_x, level_y = generate_level(load_level(map_name))
 camera = Camera()
 direction = [0, 0]
+attack_timer = Timer(FPS // 2)
 while running:
+    attack_timer.tick()
     # изменяем ракурс камеры
     # внутри игрового цикла ещё один цикл
     # приёма и обработки сообщений
@@ -409,8 +476,9 @@ while running:
         # при закрытии окна
         if event.type == pygame.QUIT:
             running = False
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            pass
+        if event.type == pygame.MOUSEBUTTONDOWN and int(attack_timer) == 0:
+            Bullet(player.rect.x, player.rect.y, *event.pos, player)
+            attack_timer.start()
         if event.type == pygame.KEYDOWN:
             if event.key == 1073741906:
                 direction[1] -= 1
@@ -432,6 +500,7 @@ while running:
     player.make_move(*direction)
     monster_group.update()
     player_group.update()
+    attack_group.update()
     camera.update(player)
     # обновляем положение всех спрайтов
     for sprite in all_sprites:
@@ -440,6 +509,7 @@ while running:
     tiles_group.draw(
         screen)  # спрайты клеток и сущности рисуются отдельно, чтобы спрайты клеток не наслаивались на сущностей
     entity_group.draw(screen)
+    attack_group.draw(screen)
     for i in entity_group:
         draw_hp(i)
     clock.tick(FPS)
