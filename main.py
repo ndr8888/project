@@ -131,11 +131,13 @@ class Empty: # класс пустоты для матрицы
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
-        self.timer = Timer(10)
-
+        self.speed = 10 #должен быть кратен tile_width
+        self.timer_x = Timer(self.speed)
+        self.timer_y = Timer(self.speed)
         super().__init__(player_group, all_sprites, entity_group)
         self.hp = 8
         self.hp_max = 10
+        self.diagonal = False
         self.pos_x, self.pos_y = pos_x, pos_y #координаты игрока в клетках
         self.image = player_image
         self.rect = self.image.get_rect().move(
@@ -144,28 +146,60 @@ class Player(pygame.sprite.Sprite):
         self.x_move, self.y_move = 0, 0
 
     def make_move(self, x_move, y_move):
-        if not (self.x_move != 0 or self.y_move != 0):
-            self.x_move, self.y_move = x_move, y_move
-            self.timer.start()
+        if self.diagonal:
+            if not (self.x_move != 0) and x_move != 0 and int(self.timer_y) == 0:
+                self.x_move = x_move
+                self.timer_x.start()
+                # self.pos_x += x_move
+                self.diagonal = not self.diagonal
+            if not (self.y_move != 0) and y_move != 0 and int(self.timer_x) == 0:
+                self.y_move = y_move
+                self.timer_y.start()
+                # self.pos_y += y_move
+                self.diagonal = not self.diagonal
+        else:
+            if not (self.y_move != 0) and y_move != 0 and int(self.timer_x) == 0:
+                self.y_move = y_move
+                self.timer_y.start()
+                # self.pos_y += y_move
+                self.diagonal = not self.diagonal
+            if not (self.x_move != 0) and x_move != 0 and int(self.timer_y) == 0:
+                self.x_move = x_move
+                self.timer_x.start()
+                # self.pos_x += x_move
+                self.diagonal = not self.diagonal
+
 
     def update(self):
-        if self.x_move != 0 or self.y_move != 0:
-            self.timer.tick()
-            self.rect.x += self.x_move * (tile_width / self.timer.time_max)
-            self.rect.y += self.y_move * (tile_width / self.timer.time_max)
-            if int(self.timer) == 0:
-                self.x_move, self.y_move = 0, 0
+        if self.x_move != 0:
+            self.timer_x.tick()
+            self.rect.x += self.x_move * (tile_width / self.timer_x.time_max)
+            self.rect.y += self.y_move * (tile_width / self.timer_x.time_max)
+            if int(self.timer_x) == 0:
+                self.x_move = 0
+        if self.y_move != 0:
+            self.timer_y.tick()
+            self.rect.x += self.x_move * (tile_width / self.timer_y.time_max)
+            self.rect.y += self.y_move * (tile_width / self.timer_y.time_max)
+            if int(self.timer_y) == 0:
+                self.y_move = 0
         for i in wall_group:  # проверка на столкновение со стенами
             if pygame.sprite.collide_mask(self, i):
-                self.rect.x -= self.x_move * (tile_width / self.timer.time_max)
-                self.rect.y -= self.y_move * (tile_width / self.timer.time_max)
-                self.timer.stop()
+                self.rect.x -= self.x_move * (tile_width / self.timer_x.time_max)
+                self.rect.y -= self.y_move * (tile_width / self.timer_x.time_max)
+                self.timer_x.stop()
+                self.timer_y.stop()
+                # self.pos_x -= self.x_move
+                # self.pos_y -= self.y_move
                 self.x_move, self.y_move = 0, 0
         for i in monster_group:  # проверка на столкновение с монстрами
             if pygame.sprite.collide_mask(self, i):
-                self.rect.x -= self.x_move * (tile_width / self.timer.time_max)
-                self.rect.y -= self.y_move * (tile_width / self.timer.time_max)
-                self.timer.stop()
+                self.rect.x -= self.x_move * (tile_width / self.timer_x.time_max)
+                self.rect.y -= self.y_move * (tile_width / self.timer_x.time_max)
+                # self.pos_x -= self.x_move
+                # self.pos_y -= self.y_move
+                self.timer_x.stop()
+                self.timer_y.stop()
                 self.x_move, self.y_move = 0, 0
 
 
@@ -185,7 +219,9 @@ class Monster(pygame.sprite.Sprite):
         return 'monster'
 
     def update(self):
+        print(1)
         path = board.get_path(self.pos_x, self.pos_y, player.pos_x, player.pos_y)
+        print(2)
         if not len(path) == 2 and board[path[1][0]][path[1][1]].type() == 'empty' and abs(self.pos_x - player.pos_x) <= self.rang and abs(self.pos_y - player.pos_y) <= self.rang:
             self.rect.x += tile_width * (path[1][0] - self.pos_x)
             self.rect.y += tile_height * (path[1][1] - self.pos_y)
@@ -313,6 +349,7 @@ up_hold = False
 down_hold = False
 left_hold = False
 right_hold = False
+direction = [0, 0]
 while running:
     # изменяем ракурс камеры
     # внутри игрового цикла ещё один цикл
@@ -324,32 +361,32 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN:
             pass
         if event.type == pygame.KEYDOWN:
-            print(1)
             if event.key == 1073741906:
+                direction[1] -= 1
                 up_hold = True
             if event.key == 1073741903:
+                direction[0] += 1
                 right_hold = True
             if event.key == 1073741905:
+                direction[1] += 1
                 down_hold = True
             if event.key == 1073741904:
+                direction[0] -= 1
                 left_hold = True
         if event.type == pygame.KEYUP:
             if event.key == 1073741906:
+                direction[1] += 1
                 up_hold = False
             if event.key == 1073741903:
+                direction[0] -= 1
                 right_hold = False
             if event.key == 1073741905:
+                direction[1] -= 1
                 down_hold = False
             if event.key == 1073741904:
+                direction[0] += 1
                 left_hold = False
-    if up_hold:
-        player.make_move(0, -1)
-    if right_hold:
-        player.make_move(1, 0)
-    if down_hold:
-        player.make_move(0, 1)
-    if left_hold:
-        player.make_move(-1, 0)
+    player.make_move(*direction)
     monster_group.update()
     player_group.update()
     camera.update(player)
