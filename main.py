@@ -129,9 +129,16 @@ class Empty: # класс пустоты для матрицы
     def type(self):
         return 'empty'
 
+class Blocked: # класс пустоты для матрицы
+    def __init__(self):
+        pass
+
+    def type(self):
+        return 'blocked'
+
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
-        self.speed = 10 #должен быть кратен tile_width
+        self.speed = 8 #должен быть кратен tile_width
         self.timer_x = Timer(self.speed)
         self.timer_y = Timer(self.speed)
         super().__init__(player_group, all_sprites, entity_group)
@@ -145,28 +152,31 @@ class Player(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.x_move, self.y_move = 0, 0
 
+    def type(self):
+        return 'player'
+
     def make_move(self, x_move, y_move):
         if self.diagonal:
-            if not (self.x_move != 0) and x_move != 0 and int(self.timer_y) == 0:
+            if self.x_move == 0 and x_move != 0 and int(self.timer_y) == 0 and board[self.pos_x + x_move][self.pos_y].type() not in ['wall', 'monster', 'blocked']:
+                board[self.pos_x + x_move][self.pos_y] = Blocked()
                 self.x_move = x_move
                 self.timer_x.start()
-                # self.pos_x += x_move
                 self.diagonal = not self.diagonal
-            if not (self.y_move != 0) and y_move != 0 and int(self.timer_x) == 0:
+            if self.y_move == 0 and y_move != 0 and int(self.timer_x) == 0 and board[self.pos_x][self.pos_y + y_move].type() not in ['wall', 'monster', 'blocked']:
+                board[self.pos_x][self.pos_y + y_move] = Blocked()
                 self.y_move = y_move
                 self.timer_y.start()
-                # self.pos_y += y_move
                 self.diagonal = not self.diagonal
         else:
-            if not (self.y_move != 0) and y_move != 0 and int(self.timer_x) == 0:
+            if self.y_move == 0 and y_move != 0 and int(self.timer_x) == 0 and board[self.pos_x][self.pos_y + y_move].type() not in ['wall', 'monster', 'blocked']:
+                board[self.pos_x][self.pos_y + y_move] = Blocked()
                 self.y_move = y_move
                 self.timer_y.start()
-                # self.pos_y += y_move
                 self.diagonal = not self.diagonal
-            if not (self.x_move != 0) and x_move != 0 and int(self.timer_y) == 0:
+            if self.x_move == 0 and x_move != 0 and int(self.timer_y) == 0 and board[self.pos_x + x_move][self.pos_y].type() not in ['wall', 'monster', 'blocked']:
+                board[self.pos_x + x_move][self.pos_y] = Blocked()
                 self.x_move = x_move
                 self.timer_x.start()
-                # self.pos_x += x_move
                 self.diagonal = not self.diagonal
 
 
@@ -174,37 +184,41 @@ class Player(pygame.sprite.Sprite):
         if self.x_move != 0:
             self.timer_x.tick()
             self.rect.x += self.x_move * (tile_width / self.timer_x.time_max)
-            self.rect.y += self.y_move * (tile_width / self.timer_x.time_max)
             if int(self.timer_x) == 0:
+                board[self.pos_x][self.pos_y] = Empty()
+                self.pos_x += self.x_move
+                board[self.pos_x][self.pos_y] = player
                 self.x_move = 0
         if self.y_move != 0:
             self.timer_y.tick()
-            self.rect.x += self.x_move * (tile_width / self.timer_y.time_max)
             self.rect.y += self.y_move * (tile_width / self.timer_y.time_max)
             if int(self.timer_y) == 0:
+                board[self.pos_x][self.pos_y] = Empty()
+                self.pos_y += self.y_move
+                board[self.pos_x][self.pos_y] = player
                 self.y_move = 0
-        for i in wall_group:  # проверка на столкновение со стенами
-            if pygame.sprite.collide_mask(self, i):
-                self.rect.x -= self.x_move * (tile_width / self.timer_x.time_max)
-                self.rect.y -= self.y_move * (tile_width / self.timer_x.time_max)
-                self.timer_x.stop()
-                self.timer_y.stop()
-                # self.pos_x -= self.x_move
-                # self.pos_y -= self.y_move
-                self.x_move, self.y_move = 0, 0
-        for i in monster_group:  # проверка на столкновение с монстрами
-            if pygame.sprite.collide_mask(self, i):
-                self.rect.x -= self.x_move * (tile_width / self.timer_x.time_max)
-                self.rect.y -= self.y_move * (tile_width / self.timer_x.time_max)
-                # self.pos_x -= self.x_move
-                # self.pos_y -= self.y_move
-                self.timer_x.stop()
-                self.timer_y.stop()
-                self.x_move, self.y_move = 0, 0
+        # for i in wall_group:  # проверка на столкновение со стенами
+        #     if pygame.sprite.collide_mask(self, i):
+        #         self.rect.x -= self.x_move * (tile_width / self.timer_x.time_max)
+        #         self.rect.y -= self.y_move * (tile_width / self.timer_x.time_max)
+        #         self.timer_x.stop()
+        #         self.timer_y.stop()
+        #         self.x_move, self.y_move = 0, 0
+        # for i in monster_group:  # проверка на столкновение с монстрами
+        #     if pygame.sprite.collide_mask(self, i):
+        #         self.rect.x -= self.x_move * (tile_width / self.timer_x.time_max)
+        #         self.rect.y -= self.y_move * (tile_width / self.timer_x.time_max)
+        #         self.timer_x.stop()
+        #         self.timer_y.stop()
+        #         self.x_move, self.y_move = 0, 0
 
 
 class Monster(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
+        self.x_move, self.y_move = 0, 0
+        self.speed = 10
+        self.timer_x = Timer(self.speed)
+        self.timer_y = Timer(self.speed)
         self.hp = 10
         self.hp_max = 10
         self.pos_x, self.pos_y = pos_x, pos_y
@@ -213,21 +227,49 @@ class Monster(pygame.sprite.Sprite):
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
-        self.rang = 0
+        self.rang_min = 1
+        self.rang_max = 4
+        self.next_cell = 0, 0
+
 
     def type(self):
         return 'monster'
 
     def update(self):
-        print(1)
-        path = board.get_path(self.pos_x, self.pos_y, player.pos_x, player.pos_y)
-        print(2)
-        if not len(path) == 2 and board[path[1][0]][path[1][1]].type() == 'empty' and abs(self.pos_x - player.pos_x) <= self.rang and abs(self.pos_y - player.pos_y) <= self.rang:
-            self.rect.x += tile_width * (path[1][0] - self.pos_x)
-            self.rect.y += tile_height * (path[1][1] - self.pos_y)
-            board[path[1][0]][path[1][1]] = self
-            board[self.pos_x][self.pos_y] = Empty()
-            self.pos_x, self.pos_y = path[1]
+        if int(self.timer_x) == 0 and int(self.timer_y) == 0:
+            path = board.get_path(self.pos_x, self.pos_y, player.pos_x, player.pos_y)
+            self.next_cell = path[1]
+            if not len(path) == 2 and board[self.next_cell[0]][self.next_cell[1]].type() == 'empty' and self.rang_min <= abs(
+                    self.pos_x - player.pos_x) <= self.rang_max and self.rang_min <= abs(self.pos_y - player.pos_y) <= self.rang_max:
+                x_move, y_move = self.next_cell[0] - self.pos_x, self.next_cell[1] - self.pos_y
+            else:
+                x_move, y_move = 0, 0
+
+            if self.x_move == 0 and x_move != 0 and int(self.timer_y) == 0:
+                self.x_move = x_move
+                self.timer_x.start()
+                board[self.pos_x + x_move][self.pos_y] = Blocked()
+            if self.y_move == 0 and y_move != 0 and int(self.timer_x) == 0:
+                self.y_move = y_move
+                self.timer_y.start()
+                board[self.pos_x][self.pos_y + y_move] = Blocked()
+
+        if self.x_move != 0:
+            self.timer_x.tick()
+            self.rect.x += self.x_move * (tile_width / self.timer_x.time_max)
+            if int(self.timer_x) == 0:
+                board[self.next_cell[0]][self.next_cell[1]] = self
+                board[self.pos_x][self.pos_y] = Empty()
+                self.pos_x += self.x_move
+                self.x_move = 0
+        if self.y_move != 0:
+            self.timer_y.tick()
+            self.rect.y += self.y_move * (tile_width / self.timer_y.time_max)
+            if int(self.timer_y) == 0:
+                board[self.next_cell[0]][self.next_cell[1]] = self
+                board[self.pos_x][self.pos_y] = Empty()
+                self.pos_y += self.y_move
+                self.y_move = 0
 
 
 def generate_level(level):
@@ -243,7 +285,7 @@ def generate_level(level):
             elif level[y][x] == '@':
                 BackgroundTile(x, y)
                 new_player = Player(x, y)
-                table[x].append(Empty())
+                table[x].append(new_player)
             elif level[y][x] == '1': #монстер обозначается цифрой 1, при добавлнии новых монстров будет 2, 3 и тд
                 BackgroundTile(x, y)
                 table[x].append(Monster(x, y))
@@ -278,7 +320,7 @@ class Board: #класс матрицы доски
 
     def get_path(self, x1, y1, x2, y2): #поиск пути
         n = 1
-        matrix = [list(map(lambda x: False if x.type() in ['wall', 'monster'] else -1, i)) for i in self.table]
+        matrix = [list(map(lambda x: False if x.type() in ['wall', 'monster', 'blocked'] else -1, i)) for i in self.table]
         matrix[x1][y1] = 1
         while matrix[x2][y2] == -1:
             flag = False
@@ -345,10 +387,6 @@ running = True
 pos = None
 board, player, level_x, level_y = generate_level(load_level(map_name))
 camera = Camera()
-up_hold = False
-down_hold = False
-left_hold = False
-right_hold = False
 direction = [0, 0]
 while running:
     # изменяем ракурс камеры
@@ -363,29 +401,21 @@ while running:
         if event.type == pygame.KEYDOWN:
             if event.key == 1073741906:
                 direction[1] -= 1
-                up_hold = True
             if event.key == 1073741903:
                 direction[0] += 1
-                right_hold = True
             if event.key == 1073741905:
                 direction[1] += 1
-                down_hold = True
             if event.key == 1073741904:
                 direction[0] -= 1
-                left_hold = True
         if event.type == pygame.KEYUP:
             if event.key == 1073741906:
                 direction[1] += 1
-                up_hold = False
             if event.key == 1073741903:
                 direction[0] -= 1
-                right_hold = False
             if event.key == 1073741905:
                 direction[1] -= 1
-                down_hold = False
             if event.key == 1073741904:
                 direction[0] += 1
-                left_hold = False
     player.make_move(*direction)
     monster_group.update()
     player_group.update()
