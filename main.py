@@ -7,13 +7,33 @@ clock = pygame.time.Clock()
 pygame.init()
 size = WIDTH, HEIGHT = 750, 750
 screen = pygame.display.set_mode(size)
-tile_width = tile_height = 50
+tile_width = tile_height = 40
 all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 wall_group = pygame.sprite.Group()
 monster_group = pygame.sprite.Group()
 entity_group = pygame.sprite.Group() #игроки и мобы
+
+
+class Timer:
+    def __init__(self, time_max):
+        self.time_max = time_max
+        self.time = 0
+
+    def start(self):
+        self.time = self.time_max
+
+    def tick(self):
+        self.time -= 1
+        if self.time < 0:
+            self.time = 0
+
+    def stop(self):
+        self.time = 0
+
+    def __int__(self):
+        return self.time
 
 
 def load_image(name, colorkey=None):
@@ -27,12 +47,12 @@ def load_image(name, colorkey=None):
 
 
 tile_images = {
-    'wall': load_image('box.png'),
-    'empty': load_image('grass.png')
+    'wall': pygame.transform.scale(load_image('box.png'), (tile_width, tile_height)),
+    'empty': pygame.transform.scale(load_image('grass.png'), (tile_width, tile_height))
 }
 player_image = pygame.transform.scale(load_image('mar.png'), (tile_width, tile_height))
 monster_image = pygame.transform.scale(load_image('hero.png'), (tile_width, tile_height))
-FPS = 50
+FPS = 60
 
 def terminate():
     pygame.quit()
@@ -111,6 +131,8 @@ class Empty: # класс пустоты для матрицы
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
+        self.timer = Timer(10)
+
         super().__init__(player_group, all_sprites, entity_group)
         self.hp = 8
         self.hp_max = 10
@@ -119,26 +141,33 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
+        self.x_move, self.y_move = 0, 0
 
-    def update(self, x_move, y_move):
-        self.rect.x += x_move * tile_width
-        self.rect.y += y_move * tile_height
-        self.pos_x += x_move
-        self.pos_y += y_move
-        for i in wall_group: #проверка на столкновение со стенами
+    def make_move(self, x_move, y_move):
+        if not (self.x_move != 0 or self.y_move != 0):
+            self.x_move, self.y_move = x_move, y_move
+            self.timer.start()
+
+    def update(self):
+        if self.x_move != 0 or self.y_move != 0:
+            self.timer.tick()
+            self.rect.x += self.x_move * (tile_width / self.timer.time_max)
+            self.rect.y += self.y_move * (tile_width / self.timer.time_max)
+            if int(self.timer) == 0:
+                self.x_move, self.y_move = 0, 0
+        for i in wall_group:  # проверка на столкновение со стенами
             if pygame.sprite.collide_mask(self, i):
-                self.rect.x -= x_move * tile_width
-                self.rect.y -= y_move * tile_height
-                self.pos_x -= x_move
-                self.pos_y -= y_move
-                return True
-        for i in monster_group: #проверка на столкновение с монстрами
+                self.rect.x -= self.x_move * (tile_width / self.timer.time_max)
+                self.rect.y -= self.y_move * (tile_width / self.timer.time_max)
+                self.timer.stop()
+                self.x_move, self.y_move = 0, 0
+        for i in monster_group:  # проверка на столкновение с монстрами
             if pygame.sprite.collide_mask(self, i):
-                self.rect.x -= x_move * tile_width
-                self.rect.y -= y_move * tile_height
-                self.pos_x -= x_move
-                self.pos_y -= y_move
-                return True
+                self.rect.x -= self.x_move * (tile_width / self.timer.time_max)
+                self.rect.y -= self.y_move * (tile_width / self.timer.time_max)
+                self.timer.stop()
+                self.x_move, self.y_move = 0, 0
+
 
 class Monster(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
@@ -150,13 +179,14 @@ class Monster(pygame.sprite.Sprite):
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
+        self.rang = 0
 
     def type(self):
         return 'monster'
 
     def update(self):
         path = board.get_path(self.pos_x, self.pos_y, player.pos_x, player.pos_y)
-        if not len(path) == 2 and board[path[1][0]][path[1][1]].type() == 'empty' and abs(self.pos_x - player.pos_x) <= 5 and abs(self.pos_y - player.pos_y) <= 5:
+        if not len(path) == 2 and board[path[1][0]][path[1][1]].type() == 'empty' and abs(self.pos_x - player.pos_x) <= self.rang and abs(self.pos_y - player.pos_y) <= self.rang:
             self.rect.x += tile_width * (path[1][0] - self.pos_x)
             self.rect.y += tile_height * (path[1][1] - self.pos_y)
             board[path[1][0]][path[1][1]] = self
@@ -279,6 +309,10 @@ running = True
 pos = None
 board, player, level_x, level_y = generate_level(load_level(map_name))
 camera = Camera()
+up_hold = False
+down_hold = False
+left_hold = False
+right_hold = False
 while running:
     # изменяем ракурс камеры
     # внутри игрового цикла ещё один цикл
@@ -290,18 +324,34 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN:
             pass
         if event.type == pygame.KEYDOWN:
+            print(1)
             if event.key == 1073741906:
-                if not player.update(0, -1):
-                    monster_group.update()
-            elif event.key == 1073741903:
-                if not player.update(1, 0):
-                    monster_group.update()
-            elif event.key == 1073741905:
-                if not player.update(0, 1):
-                    monster_group.update()
-            elif event.key == 1073741904:
-                if not player.update(-1, 0):
-                    monster_group.update()
+                up_hold = True
+            if event.key == 1073741903:
+                right_hold = True
+            if event.key == 1073741905:
+                down_hold = True
+            if event.key == 1073741904:
+                left_hold = True
+        if event.type == pygame.KEYUP:
+            if event.key == 1073741906:
+                up_hold = False
+            if event.key == 1073741903:
+                right_hold = False
+            if event.key == 1073741905:
+                down_hold = False
+            if event.key == 1073741904:
+                left_hold = False
+    if up_hold:
+        player.make_move(0, -1)
+    if right_hold:
+        player.make_move(1, 0)
+    if down_hold:
+        player.make_move(0, 1)
+    if left_hold:
+        player.make_move(-1, 0)
+    monster_group.update()
+    player_group.update()
     camera.update(player)
     # обновляем положение всех спрайтов
     for sprite in all_sprites:
