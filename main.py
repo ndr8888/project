@@ -13,7 +13,7 @@ tiles_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 wall_group = pygame.sprite.Group()
 monster_group = pygame.sprite.Group()
-entity_group = pygame.sprite.Group() #игроки и мобы
+entity_group = pygame.sprite.Group()  # игроки и мобы
 
 
 class Timer:
@@ -54,9 +54,11 @@ player_image = pygame.transform.scale(load_image('mar.png'), (tile_width, tile_h
 monster_image = pygame.transform.scale(load_image('hero.png'), (tile_width, tile_height))
 FPS = 60
 
+
 def terminate():
     pygame.quit()
     sys.exit()
+
 
 def start_screen():
     intro_text = ["ЗАСТАВКА", "",
@@ -87,7 +89,9 @@ def start_screen():
         pygame.display.flip()
         clock.tick(FPS)
 
+
 start_screen()
+
 
 def load_level(filename):
     filename = "data/" + filename
@@ -102,7 +106,7 @@ def load_level(filename):
     return list(map(lambda x: x.ljust(max_width, '.'), level_map))
 
 
-class BackgroundTile(pygame.sprite.Sprite): #класс фоновой картинки, пришлось разделить его и класс стены
+class BackgroundTile(pygame.sprite.Sprite):  # класс фоновой картинки, пришлось разделить его и класс стены
     def __init__(self, pos_x, pos_y):
         super().__init__(tiles_group, all_sprites)
         self.image = tile_images['empty']
@@ -111,7 +115,7 @@ class BackgroundTile(pygame.sprite.Sprite): #класс фоновой карт�
         self.mask = pygame.mask.from_surface(self.image)
 
 
-class Wall(pygame.sprite.Sprite): #класс стены
+class Wall(pygame.sprite.Sprite):  # класс стены
     def __init__(self, pos_x, pos_y):
         super().__init__(tiles_group, all_sprites, wall_group)
         self.image = tile_images['wall']
@@ -119,33 +123,36 @@ class Wall(pygame.sprite.Sprite): #класс стены
             tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
 
-    def type(self): # возвращает строку типа спрайта, нужно для использования спрайтов в матрице
+    def type(self):  # возвращает строку типа спрайта, нужно для использования спрайтов в матрице
         return 'wall'
 
-class Empty: # класс пустоты для матрицы
+
+class Empty:  # класс пустоты для матрицы
     def __init__(self):
         pass
 
     def type(self):
         return 'empty'
 
-class Blocked: # класс пустоты для матрицы
+
+class Blocked:  # класс пустоты для матрицы
     def __init__(self):
         pass
 
     def type(self):
         return 'blocked'
 
+
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
-        self.speed = 8 #должен быть кратен tile_width
+        self.speed = 8  # должен быть кратен tile_width
         self.timer_x = Timer(self.speed)
         self.timer_y = Timer(self.speed)
         super().__init__(player_group, all_sprites, entity_group)
         self.hp = 8
         self.hp_max = 10
         self.diagonal = False
-        self.pos_x, self.pos_y = pos_x, pos_y #координаты игрока в клетках
+        self.pos_x, self.pos_y = pos_x, pos_y  # координаты игрока в клетках
         self.image = player_image
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
@@ -157,28 +164,31 @@ class Player(pygame.sprite.Sprite):
 
     def make_move(self, x_move, y_move):
         if self.diagonal:
-            if self.x_move == 0 and x_move != 0 and int(self.timer_y) == 0 and board[self.pos_x + x_move][self.pos_y].type() not in ['wall', 'monster', 'blocked']:
+            if self.x_move == 0 and x_move != 0 and int(self.timer_y) == 0 and board[self.pos_x + x_move][
+                self.pos_y].type() not in ['wall', 'monster', 'blocked']:
                 board[self.pos_x + x_move][self.pos_y] = Blocked()
                 self.x_move = x_move
                 self.timer_x.start()
                 self.diagonal = not self.diagonal
-            if self.y_move == 0 and y_move != 0 and int(self.timer_x) == 0 and board[self.pos_x][self.pos_y + y_move].type() not in ['wall', 'monster', 'blocked']:
+            if self.y_move == 0 and y_move != 0 and int(self.timer_x) == 0 and board[self.pos_x][
+                self.pos_y + y_move].type() not in ['wall', 'monster', 'blocked']:
                 board[self.pos_x][self.pos_y + y_move] = Blocked()
                 self.y_move = y_move
                 self.timer_y.start()
                 self.diagonal = not self.diagonal
         else:
-            if self.y_move == 0 and y_move != 0 and int(self.timer_x) == 0 and board[self.pos_x][self.pos_y + y_move].type() not in ['wall', 'monster', 'blocked']:
+            if self.y_move == 0 and y_move != 0 and int(self.timer_x) == 0 and board[self.pos_x][
+                self.pos_y + y_move].type() not in ['wall', 'monster', 'blocked']:
                 board[self.pos_x][self.pos_y + y_move] = Blocked()
                 self.y_move = y_move
                 self.timer_y.start()
                 self.diagonal = not self.diagonal
-            if self.x_move == 0 and x_move != 0 and int(self.timer_y) == 0 and board[self.pos_x + x_move][self.pos_y].type() not in ['wall', 'monster', 'blocked']:
+            if self.x_move == 0 and x_move != 0 and int(self.timer_y) == 0 and board[self.pos_x + x_move][
+                self.pos_y].type() not in ['wall', 'monster', 'blocked']:
                 board[self.pos_x + x_move][self.pos_y] = Blocked()
                 self.x_move = x_move
                 self.timer_x.start()
                 self.diagonal = not self.diagonal
-
 
     def update(self):
         if self.x_move != 0:
@@ -227,32 +237,34 @@ class Monster(pygame.sprite.Sprite):
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
-        self.rang_min = 1
-        self.rang_max = 4
+        self.rang_min = 0
+        self.rang_max = 5
         self.next_cell = 0, 0
-
 
     def type(self):
         return 'monster'
 
     def update(self):
         if int(self.timer_x) == 0 and int(self.timer_y) == 0:
+            print(1)
             path = board.get_path(self.pos_x, self.pos_y, player.pos_x, player.pos_y)
-            self.next_cell = path[1]
-            if not len(path) == 2 and board[self.next_cell[0]][self.next_cell[1]].type() == 'empty' and self.rang_min <= abs(
-                    self.pos_x - player.pos_x) <= self.rang_max and self.rang_min <= abs(self.pos_y - player.pos_y) <= self.rang_max:
+            print(2)
+            next_cell = path[1]
+            if board[next_cell[0]][next_cell[1]].type() == 'empty' and not len(path) == 2 and board[next_cell[0]][
+                    next_cell[1]].type() == 'empty' and self.rang_min <= abs(
+                        self.pos_x - player.pos_x) <= self.rang_max and self.rang_min <= abs(
+                    self.pos_y - player.pos_y) <= self.rang_max:
+                self.next_cell = path[1]
                 x_move, y_move = self.next_cell[0] - self.pos_x, self.next_cell[1] - self.pos_y
-            else:
-                x_move, y_move = 0, 0
 
-            if self.x_move == 0 and x_move != 0 and int(self.timer_y) == 0:
-                self.x_move = x_move
-                self.timer_x.start()
-                board[self.pos_x + x_move][self.pos_y] = Blocked()
-            if self.y_move == 0 and y_move != 0 and int(self.timer_x) == 0:
-                self.y_move = y_move
-                self.timer_y.start()
-                board[self.pos_x][self.pos_y + y_move] = Blocked()
+                if self.x_move == 0 and x_move != 0:
+                    self.x_move = x_move
+                    self.timer_x.start()
+                    board[self.pos_x + x_move][self.pos_y] = Blocked()
+                if self.y_move == 0 and y_move != 0:
+                    self.y_move = y_move
+                    self.timer_y.start()
+                    board[self.pos_x][self.pos_y + y_move] = Blocked()
 
         if self.x_move != 0:
             self.timer_x.tick()
@@ -278,7 +290,8 @@ def generate_level(level):
     for y in range(len(level)):
         for x in range(len(level[y])):
             if level[y][x] == '.':
-                BackgroundTile(x, y) # фоновые спрайты не добавляются в матрицу, потому что они наслаивались бы друг на друга и засоряли экран
+                BackgroundTile(x,
+                               y)  # фоновые спрайты не добавляются в матрицу, потому что они наслаивались бы друг на друга и засоряли экран
                 table[x].append(Empty())
             elif level[y][x] == '#':
                 table[x].append(Wall(x, y))
@@ -286,7 +299,7 @@ def generate_level(level):
                 BackgroundTile(x, y)
                 new_player = Player(x, y)
                 table[x].append(new_player)
-            elif level[y][x] == '1': #монстер обозначается цифрой 1, при добавлнии новых монстров будет 2, 3 и тд
+            elif level[y][x] == '1':  # монстер обозначается цифрой 1, при добавлнии новых монстров будет 2, 3 и тд
                 BackgroundTile(x, y)
                 table[x].append(Monster(x, y))
     # вернем игрока, а также размер поля в клетках
@@ -309,18 +322,20 @@ class Camera:
         self.dx = -(target.rect.x + target.rect.w // 2 - WIDTH // 2)
         self.dy = -(target.rect.y + target.rect.h // 2 - HEIGHT // 2)
 
-class Board: #класс матрицы доски
+
+class Board:  # класс матрицы доски
     def __init__(self, table):
-        self.table = table #сама матрица
+        self.table = table  # сама матрица
         self.width = len(table)
         self.height = len(table[0])
 
-    def __getitem__(self, item): #индексирование матрицы
+    def __getitem__(self, item):  # индексирование матрицы
         return self.table[item]
 
-    def get_path(self, x1, y1, x2, y2): #поиск пути
+    def get_path(self, x1, y1, x2, y2):  # поиск пути
         n = 1
-        matrix = [list(map(lambda x: False if x.type() in ['wall', 'monster', 'blocked'] else -1, i)) for i in self.table]
+        matrix = [list(map(lambda x: False if x.type() in ['wall', 'monster', 'blocked'] else -1, i)) for i in
+                  self.table]
         matrix[x1][y1] = 1
         while matrix[x2][y2] == -1:
             flag = False
@@ -345,6 +360,7 @@ class Board: #класс матрицы доски
                 matrix = [list(map(lambda x: False if x.type() in ['wall'] else -1, i)) for i in self.table]
                 matrix[x1][y1] = 1
                 while matrix[x2][y2] == -1:
+                    print(3)
                     for x in range(self.width):
                         for y in range(self.height):
                             if matrix[x][y] == n:
@@ -356,7 +372,8 @@ class Board: #класс матрицы доски
                                     matrix[x][y - 1] = n + 1
                                 if 0 <= x < self.width and 0 <= y + 1 < self.height and matrix[x][y + 1] == -1:
                                     matrix[x][y + 1] = n + 1
-        #print(*matrix, sep='\n')
+                    n += 1
+        # print(*matrix, sep='\n')
         x, y = x2, y2
         lst = [(x, y)]
         while x != x1 or y != y1:
@@ -372,15 +389,15 @@ class Board: #класс матрицы доски
             n -= 1
         return lst[::-1]
 
+
 def draw_hp(entity):
     pygame.draw.rect(screen, (255, 0, 0), (entity.rect.x, entity.rect.y - 20,
                                            int(tile_width * (entity.hp / entity.hp_max)), 15))
     pygame.draw.rect(screen, (0, 0, 0), (entity.rect.x, entity.rect.y - 20,
-                                           tile_width, 15), 2)
+                                         tile_width, 15), 2)
     font = pygame.font.Font(None, 20)
     text = font.render(str(entity.hp), True, pygame.Color('white'))
     screen.blit(text, (entity.rect.x, entity.rect.y - text.get_height() - 20))
-
 
 
 running = True
@@ -424,7 +441,8 @@ while running:
     for sprite in all_sprites:
         camera.apply(sprite)
     screen.fill((255, 255, 255))
-    tiles_group.draw(screen) #спрайты клеток и сущности рисуются отдельно, чтобы спрайты клеток не наслаивались на сущностей
+    tiles_group.draw(
+        screen)  # спрайты клеток и сущности рисуются отдельно, чтобы спрайты клеток не наслаивались на сущностей
     entity_group.draw(screen)
     for i in entity_group:
         draw_hp(i)
