@@ -27,8 +27,8 @@ class Timer:
     def start(self):
         self.time = self.time_max
 
-    def tick(self):
-        self.time -= 1
+    def tick(self, time=1):
+        self.time -= time
         if self.time < 0:
             self.time = 0
 
@@ -153,7 +153,7 @@ class Player(pygame.sprite.Sprite):
         self.timer_x = Timer(self.speed)
         self.timer_y = Timer(self.speed)
         super().__init__(player_group, all_sprites, entity_group)
-        self.hp = 8
+        self.hp = 10
         self.hp_max = 10
         self.diagonal = False #переменная, нужная для диагонального хода игроком
         self.pos_x, self.pos_y = pos_x, pos_y  # координаты игрока в клетках
@@ -220,6 +220,8 @@ class Player(pygame.sprite.Sprite):
 
 class Monster(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
+        self.attack_timer = Timer(FPS)
+        self.attack_timer.start()
         self.x_move, self.y_move = 0, 0
         self.speed = 10
         self.timer_x = Timer(self.speed)
@@ -232,14 +234,19 @@ class Monster(pygame.sprite.Sprite):
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
-        self.rang_min = 0
-        self.rang_max = 0
+        self.rang_min = 3
+        self.rang_max = 7
         self.next_cell = 0, 0
 
     def type(self):
         return 'monster'
 
     def update(self):
+        self.attack_timer.tick()
+        if abs(self.pos_x - player.pos_x) <= self.rang_max and abs(self.pos_y - player.pos_y) <= self.rang_max and int(self.attack_timer) == 0:
+            Bullet(self.rect.x, self.rect.y, player.rect.x, player.rect.y, monster_group)
+            self.attack_timer.start()
+
         if int(self.timer_x) == 0 and int(self.timer_y) == 0:
             path = board.get_path(self.pos_x, self.pos_y, player.pos_x, player.pos_y)
             next_cell = path[1]
@@ -295,56 +302,45 @@ class Monster(pygame.sprite.Sprite):
             self.kill()
 
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, x1, y1, x2, y2, sender):
+    def __init__(self, x1, y1, x2, y2, fraction, damage=1):
         super().__init__(all_sprites, attack_group)
         self.image = tile_images['bullet']
         self.rect = self.image.get_rect().move(x1, y1)
         self.mask = pygame.mask.from_surface(self.image)
         self.x1, self.y1, self.x2, self.y2 = x1, y1, x2, y2
-        self.sender = sender
+        self.fraction = fraction
         self.vel = 10
-        self.dmg = 1
-        if x1 != x2 and y1 != y2:
-            self.straight_mode = False
-            self.dirs = [(1 if x1 - x2 < 0 else -1, 0), (0, 1 if y1 - y2 < 0 else -1)]
-            self.coof = (x1 - x2) / (y1 - y2)
-        else:
-            self.straight_mode = True
-            self.dirs = [0, 0]
-            if x1 < x2:
-                self.dirs[0] += self.vel
-            elif x1 > x2:
-                self.dirs[0] -= self.vel
-            if y1 < y2:
-                self.dirs[1] += self.vel
-            elif y1 > y2:
-                self.dirs[1] -= self.vel
+        self.dmg = damage
+        a = math.sqrt((self.x2 - self.x1) ** 2 + (self.y2 - self.y1) ** 2)
+        self.vector = ((x2 - x1)/a, (y2 - y1)/a)
+        print(self.vector)
 
     def update(self):
-        if not self.straight_mode:
-            for i in range(self.vel):
-                old_x, old_y = self.x1, self.y1
-                coofs = []
-                for i in self.dirs:
-                    coofs.append([i, ((self.x1 + i[0] - self.x2) / (self.y1 + i[1] - self.y2)) if (self.y1 + i[1] - self.y2) != 0 else math.inf])
-                coofs.sort(key=lambda x: abs(self.coof - x[1]))
-                if (self.x2, self.y2) in list(map(lambda a: (self.x1 + a[0][0], self.y1 + a[0][1]), coofs)):
-                    self.x1, self.y1 = self.x2, self.y2
-                else:
-                    self.x1 += coofs[0][0][0]
-                    self.y1 += coofs[0][0][1]
-                self.rect.x += self.x1 - old_x
-                self.rect.y += self.y1 - old_y
-        else:
-            self.rect.x += self.dirs[0]
-            self.rect.y += self.dirs[1]
+        old_x, old_y = self.x1, self.y1
+        self.x1, self.y1 = self.x1 + self.vector[0] * self.vel, self.y1 + self.vector[1] * self.vel
+        self.rect.x += self.x1 - old_x
+        self.rect.y += self.y1 - old_y
         for i in entity_group:  # проверка на столкновение с монстрами
-            if pygame.sprite.collide_mask(self, i) and i != self.sender:
+            if pygame.sprite.collide_mask(self, i) and i not in self.fraction:
                 i.damage(self.dmg)
                 self.kill()
         for i in wall_group:  # проверка на столкновение со стенами
             if pygame.sprite.collide_mask(self, i):
                 self.kill()
+
+class CloseAttack(pygame.sprite.Sprite):
+    def __init__(self, x, y, rotation, fraction, damage):
+        super().__init__(all_sprites, attack_group)
+        self.image = tile_images['close_attack']
+        self.image = pygame.transform.rotate(self.image, rotation)
+        self.rect = self.image.get_rect().move(
+            x - tile_width, y - tile_width)
+        self.damaged_lst = list()
+        self.mask = pygame.mask.from_surface(self.image)
+        self.timer = Timer(FPS // 4)
+        self.timer.start()
+        self.fraction = fraction
+        self.dmg = damage
 
 def generate_level(level):
     new_player, x, y = None, None, None
@@ -477,7 +473,7 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.MOUSEBUTTONDOWN and int(attack_timer) == 0:
-            Bullet(player.rect.x, player.rect.y, *event.pos, player)
+            Bullet(player.rect.x, player.rect.y, *event.pos, player_group, 2)
             attack_timer.start()
         if event.type == pygame.KEYDOWN:
             if event.key == 1073741906:
