@@ -109,24 +109,32 @@ def load_level(filename):
     return list(map(lambda x: x.ljust(max_width, '.'), level_map))
 
 
-class Inventory(pygame.sprite.Sprite):
+class Inventory(pygame.sprite.Sprite):   # класс иневентаря. В игре он снизу слева
     image = load_image('инвентарь.png')
 
     def __init__(self):
-        super().__init__(all_sprites, inventar_group)
+        super().__init__(all_sprites, inventar_group)  # добавляем в группы спрайтов
         self.hp_potions = 0  # кол-во зелий, которые лечат хп
         self.image = Inventory.image
         self.rect = self.image.get_rect()
         self.rect.x = 0  # положение
         self.rect.y = 700
 
-    def update(self, plus=0, minus=0):
-        if plus:  # если получаем, то кол-во += 1
-            self.hp_potions += 1
-        if minus:  # если тратим, то кол-во -= 1
-            self.hp_potions -= 1
-        self.rect.x = 0
+    def update(self):
+        self.rect.x = 0  # чтобы передвигался вместе с игроком
         self.rect.y = 700
+
+    def plus_hp_potion(self):
+        self.hp_potions += 1
+
+    def hp_plus(self):
+        if self.hp_potions:  # если есть зелья
+            if player.hp + 5 <= player.hp_max:  # добавляем 5хп, если не привысим максимальное кол-во хп
+                player.hp += 5  # +5 хп
+                self.hp_potions -= 1  # -1 зелье
+            elif player.hp < player.hp_max:  # если +5 превысит максимальное кол-во хп, то добавляем до максимального
+                player.hp = player.hp_max  # теперь хп = максимальные хп
+                self.hp_potions -= 1  # -1 зелье
 
 
 class BackgroundTile(pygame.sprite.Sprite):  # класс фоновой картинки, пришлось разделить его и класс стены
@@ -433,18 +441,20 @@ while running:
         # при закрытии окна
         if event.type == pygame.QUIT:
             running = False
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2:
-            inventory.update(1)
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2:  # нажатие на колесико мыши дает +1 зелье хп
+            inventory.plus_hp_potion()
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_1:
+            inventory.hp_plus()
+        if event.type == pygame.KEYDOWN:  # назначаем движение
+            if event.key == pygame.K_UP:  # вверх
                 direction[1] -= 1
-            if event.key == pygame.K_RIGHT:
+            if event.key == pygame.K_RIGHT:  # вправо
                 direction[0] += 1
-            if event.key == pygame.K_DOWN:
+            if event.key == pygame.K_DOWN:  # вниз
                 direction[1] += 1
-            if event.key == pygame.K_LEFT:
+            if event.key == pygame.K_LEFT:  # влево
                 direction[0] -= 1
-        if event.type == pygame.KEYUP:
+        if event.type == pygame.KEYUP:  # убираем движение по направлениям, если клавишу отпустили
             if event.key == pygame.K_UP:
                 direction[1] += 1
             if event.key == pygame.K_RIGHT:
@@ -461,15 +471,15 @@ while running:
     for sprite in all_sprites:
         camera.apply(sprite)
     screen.fill((255, 255, 255))
-    tiles_group.draw(
-        screen)  # спрайты клеток и сущности рисуются отдельно, чтобы спрайты клеток не наслаивались на сущностей
+    # спрайты клеток и сущности рисуются отдельно, чтобы спрайты клеток не наслаивались на сущностей
+    tiles_group.draw(screen)
     entity_group.draw(screen)
     for i in entity_group:
         draw_hp(i)
-    inventar_group.update()
-    inventar_group.draw(screen)
-    text = font_for_inventory.render(f"{inventory.hp_potions}", True, (0, 0, 0))
-    screen.blit(text, (35, 740))
+    inventar_group.update()  # обновляем положение инвентаря
+    inventar_group.draw(screen)  # выводим его на экран
+    text = font_for_inventory.render(f"{inventory.hp_potions}", True, (0, 0, 0))  # кол-во зелий
+    screen.blit(text, (35, 740))  # выводим кол-во зелий около зелья
     clock.tick(FPS)
     pygame.display.flip()
 
