@@ -2,6 +2,7 @@ import pygame
 import os
 import sys
 import random
+import math
 
 map_name = 'map.txt'
 clock = pygame.time.Clock()
@@ -15,6 +16,10 @@ player_group = pygame.sprite.Group()
 wall_group = pygame.sprite.Group()
 monster_group = pygame.sprite.Group()
 entity_group = pygame.sprite.Group()  # игроки и мобы
+attack_group = pygame.sprite.Group()
+static_sprites = pygame.sprite.Group()
+weapon_group = pygame.sprite.Group()
+inventar_group = pygame.sprite.Group()
 
 
 class Timer:
@@ -25,8 +30,8 @@ class Timer:
     def start(self):
         self.time = self.time_max
 
-    def tick(self):
-        self.time -= 1
+    def tick(self, time=1):
+        self.time -= time
         if self.time < 0:
             self.time = 0
 
@@ -49,7 +54,9 @@ def load_image(name, colorkey=None):
 
 tile_images = {
     'wall': pygame.transform.scale(load_image('box.png'), (tile_width, tile_height)),
-    'empty': pygame.transform.scale(load_image('grass.png'), (tile_width, tile_height))
+    'empty': pygame.transform.scale(load_image('grass.png'), (tile_width, tile_height)),
+    'bullet': pygame.transform.scale(load_image('bomb2.png'), (30, 30)),
+    'close_attack': pygame.transform.scale(load_image('close_attack.png'), (tile_width * 1.5, tile_height * 1.5))
 }
 player_image = pygame.transform.scale(load_image('mar.png'), (tile_width, tile_height))
 monster_image = pygame.transform.scale(load_image('hero.png'), (tile_width, tile_height))
@@ -150,9 +157,9 @@ class Player(pygame.sprite.Sprite):
         self.timer_x = Timer(self.speed)
         self.timer_y = Timer(self.speed)
         super().__init__(player_group, all_sprites, entity_group)
-        self.hp = 8
+        self.hp = 10
         self.hp_max = 10
-        self.diagonal = False #переменная, нужная для диагонального хода игроком
+        self.diagonal = False  # переменная, нужная для диагонального хода игроком
         self.pos_x, self.pos_y = pos_x, pos_y  # координаты игрока в клетках
         self.image = player_image
         self.rect = self.image.get_rect().move(
@@ -209,6 +216,11 @@ class Player(pygame.sprite.Sprite):
                 board[self.pos_x][self.pos_y] = player
                 self.y_move = 0
 
+    def damage(self, n):
+        self.hp -= n
+        if self.hp <= 0:
+            self.kill()
+
 
 class Monster(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
@@ -224,35 +236,40 @@ class Monster(pygame.sprite.Sprite):
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
-        self.rang_min = 0
-        self.rang_max = 5
+        self.rang_min = 3
+        self.rang_max = 7
         self.next_cell = 0, 0
+        self.weapon = BulletWeapon(-50, -50, self, monster_group, 1, FPS, speed=10, rang=400)
 
     def type(self):
         return 'monster'
 
     def update(self):
+        if abs(self.pos_x - player.pos_x) <= self.rang_max and abs(self.pos_y - player.pos_y) <= self.rang_max:
+            self.weapon.use(player.rect.x, player.rect.y)
+
         if int(self.timer_x) == 0 and int(self.timer_y) == 0:
             path = board.get_path(self.pos_x, self.pos_y, player.pos_x, player.pos_y)
             next_cell = path[1]
             if board[next_cell[0]][next_cell[1]].type() == 'empty' and abs(
-                        self.pos_x - player.pos_x) <= self.rang_max and abs(
-                    self.pos_y - player.pos_y) <= self.rang_max:
+                    self.pos_x - player.pos_x) <= self.rang_max and abs(
+                self.pos_y - player.pos_y) <= self.rang_max:
                 if self.rang_min <= abs(self.pos_x - player.pos_x) or self.rang_min <= abs(
-                    self.pos_y - player.pos_y):
+                        self.pos_y - player.pos_y):
                     self.next_cell = next_cell
                     x_move, y_move = self.next_cell[0] - self.pos_x, self.next_cell[1] - self.pos_y
-                elif board[self.pos_x - (next_cell[0] - self.pos_x)][self.pos_y - (next_cell[1] - self.pos_y)].type() == 'empty' and not (abs(
+                elif board[self.pos_x - (next_cell[0] - self.pos_x)][
+                    self.pos_y - (next_cell[1] - self.pos_y)].type() == 'empty' and not (abs(
                         self.pos_x - player.pos_x) == self.rang_min - 1 or abs(
-                        self.pos_y - player.pos_y) == self.rang_min - 1):
-                    self.next_cell = [self.pos_x - (next_cell[0] - self.pos_x), self.pos_y - (next_cell[1] - self.pos_y)]
+                    self.pos_y - player.pos_y) == self.rang_min - 1):
+                    self.next_cell = [self.pos_x - (next_cell[0] - self.pos_x),
+                                      self.pos_y - (next_cell[1] - self.pos_y)]
                     x_move, y_move = -(next_cell[0] - self.pos_x), -(next_cell[1] - self.pos_y)
                 # elif (abs(self.pos_x - player.pos_x) == self.rang_min - 1 or abs(self.pos_y - player.pos_y) == self.rang_min - 1) and board[self.pos_x + (next_cell[1] - self.pos_y)][self.pos_y + (next_cell[0] - self.pos_x)].type() == 'empty':
                 #     x_move, y_move = next_cell[1] - self.pos_y, next_cell[0] - self.pos_x
                 #     self.next_cell = [self.pos_x + (next_cell[1] - self.pos_y), self.pos_y + (next_cell[0] - self.pos_x)]
                 #     print(x_move, y_move)
                 else:
-                    print(board[self.pos_x - (self.next_cell[0] - self.pos_x)][self.pos_y - (self.next_cell[1] - self.pos_y)].type())
                     x_move, y_move = 0, 0
                 if self.x_move == 0 and x_move != 0:
                     self.x_move = x_move
@@ -279,6 +296,110 @@ class Monster(pygame.sprite.Sprite):
                 board[self.pos_x][self.pos_y] = Empty()
                 self.pos_y += self.y_move
                 self.y_move = 0
+
+    def damage(self, n):
+        self.hp -= n
+        if self.hp <= 0:
+            board[self.next_cell[0]][self.next_cell[1]] = Empty()
+            board[self.pos_x][self.pos_y] = Empty()
+            self.kill()
+
+
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, x1, y1, x2, y2, fraction, damage, speed, rang):
+        super().__init__(all_sprites, attack_group)
+        self.image = tile_images['bullet']
+        self.rect = self.image.get_rect().move(x1, y1)
+        self.mask = pygame.mask.from_surface(self.image)
+        self.x1, self.y1, self.x2, self.y2 = x1, y1, x2, y2
+        self.fraction = fraction
+        self.vel = speed
+        self.dmg = damage
+        a = math.sqrt((self.x2 - self.x1) ** 2 + (self.y2 - self.y1) ** 2)
+        self.vector = ((x2 - x1) / a, (y2 - y1) / a)
+        self.live_timer = Timer(rang)
+        self.live_timer.start()
+
+    def update(self):
+        old_x, old_y = self.x1, self.y1
+        self.x1, self.y1 = self.x1 + self.vector[0] * self.vel, self.y1 + self.vector[1] * self.vel
+        self.rect.x += self.x1 - old_x
+        self.rect.y += self.y1 - old_y
+        for i in entity_group:  # проверка на столкновение с монстрами
+            if pygame.sprite.collide_mask(self, i) and i not in self.fraction:
+                i.damage(self.dmg)
+                self.kill()
+        for i in wall_group:  # проверка на столкновение со стенами
+            if pygame.sprite.collide_mask(self, i):
+                self.kill()
+        self.live_timer.tick(self.vel)
+        if int(self.live_timer) == 0:
+            self.kill()
+
+
+class CloseAttack(pygame.sprite.Sprite):
+    def __init__(self, x, y, rotation, fraction, damage):
+        super().__init__(all_sprites, attack_group)
+        self.image = tile_images['close_attack']
+        self.image = pygame.transform.rotate(self.image, rotation)
+        self.rect = self.image.get_rect().move(
+            x, y)
+        self.damaged_lst = list()
+        self.mask = pygame.mask.from_surface(self.image)
+        self.timer = Timer(FPS // 4)
+        self.timer.start()
+        self.fraction = fraction
+        self.dmg = damage
+
+    def update(self):
+        for i in entity_group:  # проверка на столкновение с монстрами
+            if pygame.sprite.collide_mask(self, i) and i not in self.fraction and i not in self.damaged_lst:
+                i.damage(self.dmg)
+                self.damaged_lst.append(i)
+        self.timer.tick()
+        if int(self.timer) == 0:
+            self.kill()
+
+
+class Weapon(pygame.sprite.Sprite):
+    def __init__(self, x, y, owner, fraction, damage, cooldown):
+        super().__init__(all_sprites, static_sprites, weapon_group)
+        self.description = ''''''
+        self.owner, self.fraction, self.damage = owner, fraction, damage
+        self.timer = Timer(cooldown)
+        self.image = tile_images['bullet']
+        self.rect = self.image.get_rect().move(
+            x, y)
+
+    def update(self):
+        self.timer.tick()
+
+    # def use(self):
+    #     if int(self.timer) == 0:
+    #         self.timer.start()
+
+
+class BulletWeapon(Weapon):
+    def __init__(self, *args, speed=10, rang=400):
+        super().__init__(*args)
+        self.speed, self.rang = speed, rang
+        self.image = tile_images['bullet']
+
+    def use(self, x, y):
+        if int(self.timer) == 0:
+            self.timer.start()
+            Bullet(self.owner.rect.x, self.owner.rect.y, x, y, self.fraction, self.damage, self.speed, self.rang)
+
+
+class CloseWeapon(Weapon):
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.image = tile_images['close_attack']
+
+    def use(self, x, y):
+        if int(self.timer) == 0:
+            self.timer.start()
+            CloseAttack(self.owner.rect.x + tile_width * 0.5, self.owner.rect.y + tile_width * 0.5, 45, self.fraction, self.damage)
 
 
 def generate_level(level):
@@ -386,6 +507,34 @@ class Board:  # класс матрицы доски
         return lst[::-1]
 
 
+class Inventory(pygame.sprite.Sprite):   # класс иневентаря. В игре он снизу слева
+    image = load_image('инвентарь.png')
+
+    def __init__(self):
+        super().__init__(all_sprites, inventar_group)  # добавляем в группы спрайтов
+        self.hp_potions = 0  # кол-во зелий, которые лечат хп
+        self.image = Inventory.image
+        self.rect = self.image.get_rect()
+        self.rect.x = 0  # положение
+        self.rect.y = 700
+
+    def update(self):
+        self.rect.x = 0  # чтобы передвигался вместе с игроком
+        self.rect.y = 700
+
+    def plus_hp_potion(self):
+        self.hp_potions += 1
+
+    def hp_plus(self):
+        if self.hp_potions:  # если есть зелья
+            if player.hp + 5 <= player.hp_max:  # добавляем 5хп, если не привысим максимальное кол-во хп
+                player.hp += 5  # +5 хп
+                self.hp_potions -= 1  # -1 зелье
+            elif player.hp < player.hp_max:  # если +5 превысит максимальное кол-во хп, то добавляем до максимального
+                player.hp = player.hp_max  # теперь хп = максимальные хп
+                self.hp_potions -= 1  # -1 зелье
+
+
 def draw_hp(entity):
     pygame.draw.rect(screen, (255, 0, 0), (entity.rect.x, entity.rect.y - 20,
                                            int(tile_width * (entity.hp / entity.hp_max)), 15))
@@ -397,10 +546,14 @@ def draw_hp(entity):
 
 
 running = True
-pos = None
+pos = 0, 0
 board, player, level_x, level_y = generate_level(load_level(map_name))
 camera = Camera()
 direction = [0, 0]
+is_clicked = False
+close_weapon, range_weapon = CloseWeapon(-50, -50, player, player_group, 3, FPS // 3), BulletWeapon(-50, -50, player, player_group, 3, FPS // 3, speed=10, rang=400)
+inventory = Inventory()
+font_for_inventory = pygame.font.Font(None, 20)
 while running:
     # изменяем ракурс камеры
     # внутри игрового цикла ещё один цикл
@@ -409,29 +562,46 @@ while running:
         # при закрытии окна
         if event.type == pygame.QUIT:
             running = False
+
         if event.type == pygame.MOUSEBUTTONDOWN:
-            pass
-        if event.type == pygame.KEYDOWN:
-            if event.key == 1073741906:
+            is_clicked = True
+        if event.type == pygame.MOUSEBUTTONUP:
+            is_clicked = False
+
+        if event.type == pygame.MOUSEMOTION:
+            pos = event.pos
+
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2:  # нажатие на колесико мыши дает +1 зелье хп
+            inventory.plus_hp_potion()
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_1:  # восстанавливает до 5хп
+            inventory.hp_plus()
+
+        if event.type == pygame.KEYDOWN:  # назначаем движение
+            if event.key == pygame.K_UP:  # вверх
                 direction[1] -= 1
-            if event.key == 1073741903:
+            if event.key == pygame.K_RIGHT:  # вправо
                 direction[0] += 1
-            if event.key == 1073741905:
+            if event.key == pygame.K_DOWN:  # вниз
                 direction[1] += 1
-            if event.key == 1073741904:
+            if event.key == pygame.K_LEFT:  # влево
                 direction[0] -= 1
-        if event.type == pygame.KEYUP:
-            if event.key == 1073741906:
+        if event.type == pygame.KEYUP:  # убираем движение по направлениям, если клавишу отпустили
+            if event.key == pygame.K_UP:
                 direction[1] += 1
-            if event.key == 1073741903:
+            if event.key == pygame.K_RIGHT:
                 direction[0] -= 1
-            if event.key == 1073741905:
+            if event.key == pygame.K_DOWN:
                 direction[1] -= 1
-            if event.key == 1073741904:
+            if event.key == pygame.K_LEFT:
                 direction[0] += 1
+    if is_clicked:
+        close_weapon.use(*pos)
+        range_weapon.use(*pos)
     player.make_move(*direction)
     monster_group.update()
     player_group.update()
+    attack_group.update()
+    weapon_group.update()
     camera.update(player)
     # обновляем положение всех спрайтов
     for sprite in all_sprites:
@@ -440,8 +610,13 @@ while running:
     tiles_group.draw(
         screen)  # спрайты клеток и сущности рисуются отдельно, чтобы спрайты клеток не наслаивались на сущностей
     entity_group.draw(screen)
+    attack_group.draw(screen)
     for i in entity_group:
         draw_hp(i)
+    inventar_group.update()  # обновляем положение инвентаря
+    inventar_group.draw(screen)  # выводим его на экран
+    text = font_for_inventory.render(f"{inventory.hp_potions}", True, (255, 0, 0))  # кол-во зелий
+    screen.blit(text, (35, 740))  # выводим кол-во зелий около зелья
     clock.tick(FPS)
     pygame.display.flip()
 # создадим группу, содержащую все спрайты
