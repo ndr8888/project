@@ -478,7 +478,7 @@ while running:
         draw_hp(i)
     inventar_group.update()  # обновляем положение инвентаря
     inventar_group.draw(screen)  # выводим его на экран
-    text = font_for_inventory.render(f"{inventory.hp_potions}", True, (0, 0, 0))  # кол-во зелий
+    text = font_for_inventory.render(f"{inventory.hp_potions}", True, (255, 0, 0))  # кол-во зелий
     screen.blit(text, (35, 740))  # выводим кол-во зелий около зелья
     clock.tick(FPS)
     pygame.display.flip()
