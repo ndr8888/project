@@ -563,9 +563,9 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-        if event.type == pygame.MOUSEBUTTONDOWN:
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             is_clicked = True
-        if event.type == pygame.MOUSEBUTTONUP:
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             is_clicked = False
 
         if event.type == pygame.MOUSEMOTION:
@@ -577,22 +577,22 @@ while running:
             inventory.hp_plus()
 
         if event.type == pygame.KEYDOWN:  # назначаем движение
-            if event.key == pygame.K_UP:  # вверх
+            if event.key == pygame.K_w:  # вверх
                 direction[1] -= 1
-            if event.key == pygame.K_RIGHT:  # вправо
+            if event.key == pygame.K_d:  # вправо
                 direction[0] += 1
-            if event.key == pygame.K_DOWN:  # вниз
+            if event.key == pygame.K_s:  # вниз
                 direction[1] += 1
-            if event.key == pygame.K_LEFT:  # влево
+            if event.key == pygame.K_a:  # влево
                 direction[0] -= 1
         if event.type == pygame.KEYUP:  # убираем движение по направлениям, если клавишу отпустили
-            if event.key == pygame.K_UP:
+            if event.key == pygame.K_w:
                 direction[1] += 1
-            if event.key == pygame.K_RIGHT:
+            if event.key == pygame.K_d:
                 direction[0] -= 1
-            if event.key == pygame.K_DOWN:
+            if event.key == pygame.K_s:
                 direction[1] -= 1
-            if event.key == pygame.K_LEFT:
+            if event.key == pygame.K_a:
                 direction[0] += 1
     if is_clicked:
         close_weapon.use(*pos)
