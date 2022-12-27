@@ -563,7 +563,7 @@ class Inventory(pygame.sprite.Sprite):   # класс иневентаря. В �
             self.rage_timer.start()  # начинаем отсчёт
 
     def plus_armor(self):
-        if self.armor_potion and int(self.rage_timer) == 0:  # если есть зелье неуязвимости и оно неактивно
+        if self.armor_potion and int(self.armor_timer) == 0:  # если есть зелье неуязвимости и оно неактивно
             self.armor_potion -= 1  # поглощаем 1 зелье
             self.armor_timer = Timer(300)  # заводим таймер на 5 сек (60 тиков в секунду)
             self.armor_timer.start()  # начинаем отсчёт
