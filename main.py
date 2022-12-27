@@ -22,6 +22,9 @@ weapon_group = pygame.sprite.Group()
 inventar_group = pygame.sprite.Group()
 
 
+koef = 1  # для зелий урона
+
+
 class Timer:
     def __init__(self, time_max):
         self.time_max = time_max
@@ -153,10 +156,10 @@ class Blocked:  # класс пустоты для матрицы
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
+        super().__init__(player_group, all_sprites, entity_group)
         self.speed = 8  # должен быть кратен tile_width
         self.timer_x = Timer(self.speed)
         self.timer_y = Timer(self.speed)
-        super().__init__(player_group, all_sprites, entity_group)
         self.hp = 10
         self.hp_max = 10
         self.diagonal = False  # переменная, нужная для диагонального хода игроком
@@ -217,7 +220,10 @@ class Player(pygame.sprite.Sprite):
                 self.y_move = 0
 
     def damage(self, n):
-        self.hp -= n
+        if int(inventory.armor_timer):
+            self.hp -= n * 0
+        else:
+            self.hp -= n * 1
         if self.hp <= 0:
             self.kill()
 
@@ -298,7 +304,10 @@ class Monster(pygame.sprite.Sprite):
                 self.y_move = 0
 
     def damage(self, n):
-        self.hp -= n
+        if int(inventory.rage_timer):  # если действует зелье увеличения урона
+            self.hp -= n * 2  # то урон х2
+        else:
+            self.hp -= n * 1
         if self.hp <= 0:
             board[self.next_cell[0]][self.next_cell[1]] = Empty()
             board[self.pos_x][self.pos_y] = Empty()
@@ -408,8 +417,8 @@ def generate_level(level):
     for y in range(len(level)):
         for x in range(len(level[y])):
             if level[y][x] == '.':
-                BackgroundTile(x,
-                               y)  # фоновые спрайты не добавляются в матрицу, потому что они наслаивались бы друг на друга и засоряли экран
+                # фоновые спрайты не добавляются в матрицу потому что они наслаивались бы друг на друга и засоряли экран
+                BackgroundTile(x, y)
                 table[x].append(Empty())
             elif level[y][x] == '#':
                 table[x].append(Wall(x, y))
@@ -512,27 +521,72 @@ class Inventory(pygame.sprite.Sprite):   # класс иневентаря. В �
 
     def __init__(self):
         super().__init__(all_sprites, inventar_group)  # добавляем в группы спрайтов
-        self.hp_potions = 0  # кол-во зелий, которые лечат хп
+
+        self.hp_potions = 0  # кол-во зелий, которые лечат 5хп
+        self.rage_potion = 0  # кол-во зелий, которые увеличивают урон в 2 раза на 10 сек
+        self.armor_potion = 0  # кол-во зелий, которые уменьшают получаемый урон до 0 на 5 сек
+
+        self.armor_timer = Timer(0)  # таймер для зелий неуязвимости
+        self.rage_timer = Timer(0)  # таймер для зелий увелмчения урона
+
         self.image = Inventory.image
         self.rect = self.image.get_rect()
         self.rect.x = 0  # положение
         self.rect.y = 700
 
     def update(self):
-        self.rect.x = 0  # чтобы передвигался вместе с игроком
+        self.rect.x = 0  # чтобы передвигался вместе с камерой
         self.rect.y = 700
 
-    def plus_hp_potion(self):
+    def plus_hp_potion(self):  # +1 зелье, которое лечит 5хп
         self.hp_potions += 1
 
+    def plus_rage_potion(self):  # +1 зелье, которое увеличивает урон в 2 раза на 10 сек
+        self.rage_potion += 1
+
+    def plus_armor_potion(self):  # +1 зелье, которое уменьшает получаемый урон до 0 на 5 сек
+        self.armor_potion += 1
+
     def hp_plus(self):
-        if self.hp_potions:  # если есть зелья
+        if self.hp_potions:  # если есть зелье хп
             if player.hp + 5 <= player.hp_max:  # добавляем 5хп, если не привысим максимальное кол-во хп
                 player.hp += 5  # +5 хп
-                self.hp_potions -= 1  # -1 зелье
+                self.hp_potions -= 1  # -1 зелье, которое лечит 5 хп
             elif player.hp < player.hp_max:  # если +5 превысит максимальное кол-во хп, то добавляем до максимального
                 player.hp = player.hp_max  # теперь хп = максимальные хп
-                self.hp_potions -= 1  # -1 зелье
+                self.hp_potions -= 1  # -1 зелье, которое лечит 5 хп
+
+    def plus_damage(self):
+        if self.rage_potion and int(self.rage_timer) == 0:  # если есть зелье ярости и оно неактивно
+            self.rage_potion -= 1  # поглощаем 1 зелье
+            self.rage_timer = Timer(600)  # заводим таймер на 10 сек (60 тиков в секунду)
+            self.rage_timer.start()  # начинаем отсчёт
+
+    def plus_armor(self):
+        if self.armor_potion and int(self.rage_timer) == 0:  # если есть зелье неуязвимости и оно неактивно
+            self.armor_potion -= 1  # поглощаем 1 зелье
+            self.armor_timer = Timer(300)  # заводим таймер на 5 сек (60 тиков в секунду)
+            self.armor_timer.start()  # начинаем отсчёт
+
+    def quantity_rendering(self):  # отображение всего инвентаря
+        inventar_group.update()  # обновляем положение инвентаря
+        inventar_group.draw(screen)  # выводим инвентарь на экран
+        text = font_for_inventory.render(f"{inventory.hp_potions}", True, (255, 0, 0))  # кол-во зелий hp
+        screen.blit(text, (35, 740))  # выводим кол-во зелий хп около зелья хп
+        text = font_for_inventory.render(f"{inventory.rage_potion}", True, (255, 0, 0))  # кол-во зелий ярости
+        screen.blit(text, (105, 740))  # выводим кол-во зелий ярости около зелья ярости
+        text = font_for_inventory.render(f"{inventory.armor_potion}", True, (255, 0, 0))  # кол-во зелий неуязвимости
+        screen.blit(text, (155, 740))  # выводим кол-во зелий неуязвимости около зелья неуязвимости
+
+        text = font_for_inventory.render(f"{1}", True, (0, 255, 0))  # зелье хп активируется при нажатии на 1
+        screen.blit(text, (10, 700))  # выводим зеленым шрифтом цифру 1
+        text = font_for_inventory.render(f"{2}", True, (0, 255, 0))  # зелье ярости активируется при нажатии на 2
+        screen.blit(text, (80, 700))  # выводим зеленым шрифтом цифру 2
+        text = font_for_inventory.render(f"{3}", True, (0, 255, 0))  # зелье неуязвимости активируется при нажатии на 3
+        screen.blit(text, (130, 700))  # выводим зеленым шрифтом цифру 3
+
+        inventory.rage_timer.tick()  # если зелье активно, то уменьшаем время действия до 0. Иначе 0
+        inventory.armor_timer.tick()  # если зелье активно, то уменьшаем время действия до 0. Иначе 0
 
 
 def draw_hp(entity):
@@ -576,6 +630,16 @@ while running:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_1:  # восстанавливает до 5хп
             inventory.hp_plus()
 
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 4:  # колесико мыши вверх дает +1 зелье урона
+            inventory.plus_rage_potion()
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_2:  # активирует зелье урона
+            inventory.plus_damage()
+
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 5:  # колесико мыши вниз дает +1 зелье неуязвимости
+            inventory.plus_armor_potion()
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_3:  # активирует зелье неуязвимости
+            inventory.plus_armor()
+
         if event.type == pygame.KEYDOWN:  # назначаем движение
             if event.key == pygame.K_w:  # вверх
                 direction[1] -= 1
@@ -597,6 +661,7 @@ while running:
     if is_clicked:
         close_weapon.use(*pos)
         range_weapon.use(*pos)
+
     player.make_move(*direction)
     monster_group.update()
     player_group.update()
@@ -607,17 +672,12 @@ while running:
     for sprite in all_sprites:
         camera.apply(sprite)
     screen.fill((255, 255, 255))
-    tiles_group.draw(
-        screen)  # спрайты клеток и сущности рисуются отдельно, чтобы спрайты клеток не наслаивались на сущностей
+    # спрайты клеток и сущности рисуются отдельно, чтобы спрайты клеток не наслаивались на сущностей
+    tiles_group.draw(screen)
     entity_group.draw(screen)
     attack_group.draw(screen)
-    for i in entity_group:
+    for i in entity_group:  # всем сущностям и герою выводим полоску хп
         draw_hp(i)
-    inventar_group.update()  # обновляем положение инвентаря
-    inventar_group.draw(screen)  # выводим его на экран
-    text = font_for_inventory.render(f"{inventory.hp_potions}", True, (255, 0, 0))  # кол-во зелий
-    screen.blit(text, (35, 740))  # выводим кол-во зелий около зелья
+    inventory.quantity_rendering()  # вывод всего инвентаря
     clock.tick(FPS)
     pygame.display.flip()
-# создадим группу, содержащую все спрайты
-all_sprites = pygame.sprite.Group()
