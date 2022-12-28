@@ -10,17 +10,7 @@ pygame.init()
 size = WIDTH, HEIGHT = 750, 750
 screen = pygame.display.set_mode(size)
 tile_width = tile_height = 40
-all_sprites = pygame.sprite.Group()
-tiles_group = pygame.sprite.Group()
-player_group = pygame.sprite.Group()
-wall_group = pygame.sprite.Group()
-monster_group = pygame.sprite.Group()
-entity_group = pygame.sprite.Group()  # игроки и мобы
-attack_group = pygame.sprite.Group()
-static_sprites = pygame.sprite.Group()
-weapon_group = pygame.sprite.Group()
-inventar_group = pygame.sprite.Group()
-game_over_group = pygame.sprite.Group()
+inventory_slot_width = 60
 
 
 class Timer:
@@ -59,12 +49,15 @@ images = {
     'bullet': load_image('bomb2.png'),
     'close_attack': load_image('attack.png'),
     'close_attack1': load_image('attack1.png'),
-    'inventory_slot': load_image('inventory_slot.png'),
     'empty_image': load_image('empty_image.png'),
     'monster': pygame.transform.scale(load_image('enemy.png'), (tile_width, tile_height)),
     'monster1': pygame.transform.scale(load_image('enemy1.png'), (tile_width, tile_height)),
     'player': pygame.transform.scale(load_image('mar.png'), (tile_width, tile_height)),
-    'game_over': pygame.transform.scale(load_image('gameover.png'), (WIDTH, HEIGHT))
+    'game_over': pygame.transform.scale(load_image('gameover.png'), (WIDTH, HEIGHT)),
+    'inventory_slot': pygame.transform.scale(load_image('inventory_slot.png'), (inventory_slot_width, inventory_slot_width)),
+    'sword': load_image('sword.png'),
+    'gun': load_image('gun.png'),
+    'frame': pygame.transform.scale(load_image('frame.png'), (inventory_slot_width, inventory_slot_width)),
 }
 FPS = 60
 
@@ -414,10 +407,9 @@ class CloseAttack(pygame.sprite.Sprite):
 class Weapon(pygame.sprite.Sprite):
     def __init__(self, icon, attack_picture, x, y, owner, fraction, damage, cooldown):
         super().__init__(all_sprites, static_sprites, weapon_group)
-        self.description = ''''''
         self.owner, self.fraction, self.damage = owner, fraction, damage
         self.timer = Timer(cooldown)
-        self.image = images[icon]
+        self.image = pygame.transform.scale(images[icon], (inventory_slot_width, inventory_slot_width))
         self.attack_picture = attack_picture
         self.rect = self.image.get_rect().move(
             x, y)
@@ -431,7 +423,8 @@ class Weapon(pygame.sprite.Sprite):
 
 
 class BulletWeapon(Weapon):
-    def __init__(self, *args, speed=10, rang=400, bullet_size=(30, 30), go_through_entities=False):
+    def __init__(self, *args, speed=10, rang=400, bullet_size=(30, 30), go_through_entities=False, name=''):
+        self.name = name
         super().__init__(*args)
         self.bullet_size = bullet_size
         self.speed, self.rang = speed, rang
@@ -446,7 +439,8 @@ class BulletWeapon(Weapon):
 
 
 class CloseWeapon(Weapon):
-    def __init__(self, *args, rang=2.15):
+    def __init__(self, *args, rang=2.15, name=''):
+        self.name = name
         super().__init__(*args)
         self.rang = rang
 
@@ -597,26 +591,56 @@ class Board:  # класс матрицы доски
             n -= 1
         return lst[::-1]
 
+class InventorySlot(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__(all_sprites, inventar_group, static_sprites)
+        self.image = images['inventory_slot']
+        self.rect = self.image.get_rect().move(
+            x, y)
+        self.mask = pygame.mask.from_surface(self.image)
+class Frame(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__(all_sprites, inventar_group, static_sprites)
+        self.image = images['frame']
+        self.rect = self.image.get_rect().move(
+            x, y)
+        self.mask = pygame.mask.from_surface(self.image)
 
-class Inventory(pygame.sprite.Sprite):   # класс иневентаря. В игре он снизу слева
-    image = load_image('инвентарь.png')
+class Inventory():   # класс иневентаря. В игре он снизу слева
 
     def __init__(self):
-        super().__init__(all_sprites, inventar_group, static_sprites)  # добавляем в группы спрайтов
-
+        self.items = [CloseWeapon('sword', 'close_attack1', -50, -50, player, player_group, 2, FPS // 2,
+                                         rang=4.25, name='меч'), BulletWeapon('gun', 'bullet', -50, -50,
+                                                               player,
+                                                               player_group,
+                                                               1.5, FPS // 2,
+                                                               speed=10,
+                                                               rang=400, name='пистолет')]
+        self.current_slot = 0
+        for i in range(len(self.items)):
+            self.items[i].rect.x = inventory_slot_width * i
+            self.items[i].rect.y = HEIGHT - inventory_slot_width
         self.hp_potions = 0  # кол-во зелий, которые лечат 5хп
         self.rage_potion = 0  # кол-во зелий, которые увеличивают урон в 2 раза на 10 сек
         self.armor_potion = 0  # кол-во зелий, которые уменьшают получаемый урон до 0 на 5 сек
         self.speed_potion = 0  # кол-во зелий, которые увеличивают скорость в 2 раза
-
         self.armor_timer = Timer(0)  # таймер для зелий неуязвимости
         self.rage_timer = Timer(0)  # таймер для зелий увелмчения урона
         self.speed_timer = Timer(0)  # таймер для зелий скорости
+        InventorySlot(0, HEIGHT - inventory_slot_width)
+        InventorySlot(inventory_slot_width, HEIGHT - inventory_slot_width)
+        InventorySlot(inventory_slot_width * 2, HEIGHT - inventory_slot_width)
+        InventorySlot(inventory_slot_width * 3, HEIGHT - inventory_slot_width)
+        InventorySlot(inventory_slot_width * 4, HEIGHT - inventory_slot_width)
+        InventorySlot(inventory_slot_width * 5 + 10, HEIGHT - inventory_slot_width)
+        InventorySlot(inventory_slot_width * 6 + 10, HEIGHT - inventory_slot_width)
+        InventorySlot(inventory_slot_width * 7 + 10, HEIGHT - inventory_slot_width)
+        InventorySlot(inventory_slot_width * 8 + 10, HEIGHT - inventory_slot_width)
+        self.weapon_frame = Frame(0, HEIGHT - inventory_slot_width)
 
-        self.image = Inventory.image
-        self.rect = self.image.get_rect()
-        self.rect.x = 0  # положение
-        self.rect.y = 700
+    def use_weapon(self):
+        if self.current_slot < len(self.items):
+            self.items[self.current_slot].use(*pos)
 
     def plus_hp_potion(self):  # +1 зелье, которое лечит 5хп
         self.hp_potions += 1
@@ -660,23 +684,24 @@ class Inventory(pygame.sprite.Sprite):   # класс иневентаря. В �
     def quantity_rendering(self):  # отображение всего инвентаря
         inventar_group.update()  # обновляем положение инвентаря
         inventar_group.draw(screen)  # выводим инвентарь на экран
+        weapon_group.draw(screen)
         text = font_for_inventory.render(f"{inventory.hp_potions}", True, (255, 0, 0))  # кол-во зелий hp
-        screen.blit(text, (35, 740))  # выводим кол-во зелий хп около зелья хп
+        screen.blit(text, (inventory_slot_width * 6 + 5, HEIGHT - 10))  # выводим кол-во зелий хп около зелья хп
         text = font_for_inventory.render(f"{inventory.rage_potion}", True, (255, 0, 0))  # кол-во зелий ярости
-        screen.blit(text, (105, 740))  # выводим кол-во зелий ярости около зелья ярости
+        screen.blit(text, (inventory_slot_width * 7 + 5, HEIGHT - 10))  # выводим кол-во зелий ярости около зелья ярости
         text = font_for_inventory.render(f"{inventory.armor_potion}", True, (255, 0, 0))  # кол-во зелий неуязвимости
-        screen.blit(text, (155, 740))  # выводим кол-во зелий неуязвимости около зелья неуязвимости
+        screen.blit(text, (inventory_slot_width * 8 + 5, HEIGHT - 10))  # выводим кол-во зелий неуязвимости около зелья неуязвимости
         text = font_for_inventory.render(f"{inventory.speed_potion}", True, (255, 0, 0))  # кол-во зелий скорости
-        screen.blit(text, (205, 740))  # выводим кол-во зелий скорости около зелья скорости
+        screen.blit(text, (inventory_slot_width * 9 + 5, HEIGHT - 10))  # выводим кол-во зелий скорости около зелья скорости
 
-        text = font_for_inventory.render(f"{1}", True, (0, 255, 0))  # зелье хп активируется при нажатии на 1
-        screen.blit(text, (10, 700))  # выводим зеленым шрифтом цифру 1
-        text = font_for_inventory.render(f"{2}", True, (0, 255, 0))  # зелье ярости активируется при нажатии на 2
-        screen.blit(text, (80, 700))  # выводим зеленым шрифтом цифру 2
-        text = font_for_inventory.render(f"{3}", True, (0, 255, 0))  # зелье неуязвимости активируется при нажатии на 3
-        screen.blit(text, (130, 700))  # выводим зеленым шрифтом цифру 3
-        text = font_for_inventory.render(f"{4}", True, (0, 255, 0))  # зелье скорости активируется при нажатии на 4
-        screen.blit(text, (180, 700))  # выводим зеленым шрифтом цифру 4
+        text = font_for_inventory.render(f"{6}", True, (0, 255, 0))  # зелье хп активируется при нажатии на 1
+        screen.blit(text, (inventory_slot_width * 6 + 5, HEIGHT - inventory_slot_width - 10))  # выводим зеленым шрифтом цифру 1
+        text = font_for_inventory.render(f"{7}", True, (0, 255, 0))  # зелье ярости активируется при нажатии на 2
+        screen.blit(text, (inventory_slot_width * 7 + 5, HEIGHT - inventory_slot_width - 10))  # выводим зеленым шрифтом цифру 2
+        text = font_for_inventory.render(f"{8}", True, (0, 255, 0))  # зелье неуязвимости активируется при нажатии на 3
+        screen.blit(text, (inventory_slot_width * 8 + 5, HEIGHT - inventory_slot_width - 10))  # выводим зеленым шрифтом цифру 3
+        text = font_for_inventory.render(f"{9}", True, (0, 255, 0))  # зелье скорости активируется при нажатии на 4
+        screen.blit(text, (inventory_slot_width * 9 + 5, HEIGHT - inventory_slot_width - 10))  # выводим зеленым шрифтом цифру 4
 
         inventory.rage_timer.tick()  # если зелье активно, то уменьшаем время действия до 0. Иначе 0
         inventory.armor_timer.tick()  # если зелье активно, то уменьшаем время действия до 0. Иначе 0
@@ -707,6 +732,19 @@ def draw_hp(entity):
     text = font.render(str(entity.hp), True, pygame.Color('white'))
     screen.blit(text, (entity.rect.x, entity.rect.y - text.get_height() - 20))
 
+
+
+all_sprites = pygame.sprite.Group()
+tiles_group = pygame.sprite.Group()
+player_group = pygame.sprite.Group()
+wall_group = pygame.sprite.Group()
+monster_group = pygame.sprite.Group()
+entity_group = pygame.sprite.Group()  # игроки и мобы
+attack_group = pygame.sprite.Group()
+static_sprites = pygame.sprite.Group()
+weapon_group = pygame.sprite.Group()
+inventar_group = pygame.sprite.Group()
+game_over_group = pygame.sprite.Group()
 flag = 1
 running = True
 pos = 0, 0
@@ -714,13 +752,6 @@ board, player, level_x, level_y = generate_level(load_level(map_name))
 camera = Camera()
 direction = [0, 0]
 is_clicked_r, is_clicked_l = False, False
-close_weapon, range_weapon = CloseWeapon('close_attack1', 'close_attack1', -50, -50, player, player_group, 2, FPS // 2,
-                                         rang=4.25), BulletWeapon('bullet', 'bullet', -50, -50,
-                                                               player,
-                                                               player_group,
-                                                               1.5, FPS // 2,
-                                                               speed=10,
-                                                               rang=400)
 inventory = Inventory()
 font_for_inventory = pygame.font.Font(None, 20)
 while running:
@@ -737,32 +768,59 @@ while running:
             is_clicked_r = True
         if event.type == pygame.MOUSEBUTTONUP and event.button == 3:
             is_clicked_r = False
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            is_clicked = True
-        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            is_clicked = False
+
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_1:
+            inventory.current_slot = 0
+            inventory.weapon_frame.rect.x = 0
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_2:
+            inventory.current_slot = 1
+            inventory.weapon_frame.rect.x = inventory_slot_width
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_3:
+            inventory.current_slot = 2
+            inventory.weapon_frame.rect.x = inventory_slot_width * 2
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_4:
+            inventory.current_slot = 3
+            inventory.weapon_frame.rect.x = inventory_slot_width * 3
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_5:
+            inventory.current_slot = 4
+            inventory.weapon_frame.rect.x = inventory_slot_width * 4
+
 
         if event.type == pygame.MOUSEMOTION:
             pos = event.pos
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2:  # нажатие на колесико мыши дает +1 зелье хп
             inventory.plus_hp_potion()
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_1:  # восстанавливает до 5хп
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_6:  # восстанавливает до 5хп
             inventory.hp_plus()
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 4:  # колесико мыши вверх дает +1 зелье урона
+            if inventory.current_slot != len(inventory.items) - 1:
+                inventory.current_slot += 1
+                inventory.weapon_frame.rect.x += inventory_slot_width
+            else:
+                inventory.current_slot = 0
+                inventory.weapon_frame.rect.x = 0
+
             inventory.plus_rage_potion()
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_2:  # активирует зелье урона
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_7:  # активирует зелье урона
             inventory.plus_damage()
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 5:  # колесико мыши вниз дает +1 зелье неуязвимости
+            if inventory.current_slot != 0:
+                inventory.current_slot -= 1
+                inventory.weapon_frame.rect.x -= inventory_slot_width
+            else:
+                inventory.current_slot = len(inventory.items) - 1
+                inventory.weapon_frame.rect.x = inventory_slot_width * (len(inventory.items) - 1)
+
             inventory.plus_armor_potion()
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_3:  # активирует зелье неуязвимости
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_8:  # активирует зелье неуязвимости
             inventory.plus_armor()
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:  # колесико мыши вниз дает +1 зелье скорости
             inventory.plus_speed_potion()
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_4:  # активирует зелье скорости
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_9:  # активирует зелье скорости
             inventory.plus_speed()
         if event.type == pygame.QUIT:
             running = False
@@ -795,9 +853,9 @@ while running:
         player.timer_y = Timer(player.speed)
         flag = 1
     if is_clicked_r:
-        close_weapon.use(*pos)
+        pass
     if is_clicked_l:
-        range_weapon.use(*pos)
+        inventory.use_weapon()
     player.make_move(*direction)
     monster_group.update()
     player_group.update()
@@ -816,10 +874,7 @@ while running:
     attack_group.draw(screen)
     for i in entity_group:  # всем сущностям и герою выводим полоску хп
         draw_hp(i)
-    inventar_group.update()  # обновляем положение инвентаря
-    inventar_group.draw(screen)  # выводим его на экран
-    text = font_for_inventory.render(f"{inventory.hp_potions}", True, (255, 0, 0))  # кол-во зелий
-    screen.blit(text, (35, 740))  # выводим кол-во зелий около зелья
+    inventory.quantity_rendering()
     game_over_group.draw(screen)
     clock.tick(FPS)
     pygame.display.flip()
