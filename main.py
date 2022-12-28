@@ -4,7 +4,6 @@ import sys
 import random
 import math
 
-map_name = 'map.txt'
 clock = pygame.time.Clock()
 pygame.init()
 size = WIDTH, HEIGHT = 750, 750
@@ -46,7 +45,7 @@ def load_image(name, colorkey=None):
 images = {
     'wall': pygame.transform.scale(load_image('box.png'), (tile_width, tile_height)),
     'empty': pygame.transform.scale(load_image('grass.png'), (tile_width, tile_height)),
-    'bullet': load_image('bomb2.png'),
+    'bullet': load_image('bullet.png'),
     'close_attack': load_image('attack.png'),
     'close_attack1': load_image('attack1.png'),
     'empty_image': load_image('empty_image.png'),
@@ -165,6 +164,16 @@ class Player(pygame.sprite.Sprite):
             tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
         self.x_move, self.y_move = 0, 0
+        self.x, self.y = self.rect.topleft
+
+    def set_at_position(self, pos_x, pos_y):
+        print(1)
+        self.timer_x = Timer(self.speed)
+        self.timer_y = Timer(self.speed)
+        self.diagonal = False  # переменная, нужная для диагонального хода игроком
+        self.x_move, self.y_move = 0, 0
+        self.pos_x, self.pos_y = pos_x, pos_y
+        self.rect.x, self.rect.y = tile_width * pos_x, tile_height * pos_y
         self.x, self.y = self.rect.topleft
 
     def type(self):
@@ -423,7 +432,7 @@ class Weapon(pygame.sprite.Sprite):
 
 
 class BulletWeapon(Weapon):
-    def __init__(self, *args, speed=10, rang=400, bullet_size=(30, 30), go_through_entities=False, name=''):
+    def __init__(self, *args, speed=10, rang=400, bullet_size=(25, 25), go_through_entities=False, name=''):
         self.name = name
         super().__init__(*args)
         self.bullet_size = bullet_size
@@ -459,7 +468,7 @@ class CloseWeapon(Weapon):
 
 
 def generate_level(level):
-    new_player, x, y = None, None, None
+    x, y = None, None
     table = [[] for _ in range(len(level[0]))]
     for y in range(len(level)):
         for x in range(len(level[y])):
@@ -471,8 +480,8 @@ def generate_level(level):
                 table[x].append(Wall(x, y))
             elif level[y][x] == '@':
                 BackgroundTile(x, y)
-                new_player = Player(x, y)
-                table[x].append(new_player)
+                player_coords = x, y
+                table[x].append(player)
             elif level[y][x] == '1':  # монстер обозначается цифрой 1, при добавлнии новых монстров будет 2, 3 и тд
                 BackgroundTile(x, y)
                 table[x].append(CloseMonster(x, y))
@@ -480,7 +489,7 @@ def generate_level(level):
                 BackgroundTile(x, y)
                 table[x].append(RangedMonster(x, y))
     # вернем игрока, а также размер поля в клетках
-    return Board(table), new_player, x, y
+    return Board(table), *player_coords
 
 
 class Camera:
@@ -614,8 +623,8 @@ class Inventory():   # класс иневентаря. В игре он сни�
                                                                player,
                                                                player_group,
                                                                1.5, FPS // 2,
-                                                               speed=10,
-                                                               rang=400, name='пистолет')]
+                                                               speed=12,
+                                                               rang=300, name='пистолет', bullet_size=(25, 25))]
         self.current_slot = 0
         for i in range(len(self.items)):
             self.items[i].rect.x = inventory_slot_width * i
@@ -709,6 +718,8 @@ class Inventory():   # класс иневентаря. В игре он сни�
 
 class Gameover(pygame.sprite.Sprite):
     def __init__(self):
+        global is_game_over
+        is_game_over = True
         super().__init__(all_sprites, game_over_group, static_sprites)
         self.image = images['game_over']
         self.rect = self.image.get_rect()
@@ -733,148 +744,167 @@ def draw_hp(entity):
     screen.blit(text, (entity.rect.x, entity.rect.y - text.get_height() - 20))
 
 
-
 all_sprites = pygame.sprite.Group()
-tiles_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
-wall_group = pygame.sprite.Group()
-monster_group = pygame.sprite.Group()
-entity_group = pygame.sprite.Group()  # игроки и мобы
-attack_group = pygame.sprite.Group()
+entity_group = pygame.sprite.Group()
 static_sprites = pygame.sprite.Group()
 weapon_group = pygame.sprite.Group()
-inventar_group = pygame.sprite.Group()
-game_over_group = pygame.sprite.Group()
-flag = 1
-running = True
-pos = 0, 0
-board, player, level_x, level_y = generate_level(load_level(map_name))
-camera = Camera()
-direction = [0, 0]
-is_clicked_r, is_clicked_l = False, False
-inventory = Inventory()
-font_for_inventory = pygame.font.Font(None, 20)
-while running:
-    # изменяем ракурс камеры
-    # внутри игрового цикла ещё один цикл
-    # приёма и обработки сообщений
-    for event in pygame.event.get():
-        # при закрытии окна
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            is_clicked_l = True
-        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            is_clicked_l = False
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
-            is_clicked_r = True
-        if event.type == pygame.MOUSEBUTTONUP and event.button == 3:
-            is_clicked_r = False
+player = Player(0, 0)
+weapon_lst = [CloseWeapon('sword', 'close_attack1', -50, -50, player, player_group, 2, FPS // 2,
+                                         rang=4.25, name='меч'), BulletWeapon('gun', 'bullet', -50, -50,
+                                                               player,
+                                                               player_group,
+                                                               1.5, FPS // 2,
+                                                               speed=10,
+                                                               rang=400, name='пистолет')]
 
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_1:
-            inventory.current_slot = 0
-            inventory.weapon_frame.rect.x = 0
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_2:
-            inventory.current_slot = 1
-            inventory.weapon_frame.rect.x = inventory_slot_width
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_3:
-            inventory.current_slot = 2
-            inventory.weapon_frame.rect.x = inventory_slot_width * 2
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_4:
-            inventory.current_slot = 3
-            inventory.weapon_frame.rect.x = inventory_slot_width * 3
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_5:
-            inventory.current_slot = 4
-            inventory.weapon_frame.rect.x = inventory_slot_width * 4
+for map_name in ['map.txt']:
+    is_game_over = False
+    tiles_group = pygame.sprite.Group()
+    wall_group = pygame.sprite.Group()
+    monster_group = pygame.sprite.Group()
+    entity_group = pygame.sprite.Group()  # игроки и мобы
+    attack_group = pygame.sprite.Group()
+    static_sprites = pygame.sprite.Group()
+    weapon_group = pygame.sprite.Group()
+    inventar_group = pygame.sprite.Group()
+    game_over_group = pygame.sprite.Group()
+    entity_group.add(player)
+    static_sprites.add(*weapon_lst)
+    static_sprites.add(*weapon_lst)
+    flag = 1
+    running = True
+    pos = 0, 0
+    board, player_x, player_y = generate_level(load_level(map_name))
+    player.set_at_position(player_x, player_y)
+    camera = Camera()
+    direction = [0, 0]
+    is_clicked_r, is_clicked_l = False, False
+    inventory = Inventory()
+    font_for_inventory = pygame.font.Font(None, 20)
+    while running:
+        # изменяем ракурс камеры
+        # внутри игрового цикла ещё один цикл
+        # приёма и обработки сообщений
+        for event in pygame.event.get():
+            # при закрытии окна
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                is_clicked_l = True
+            if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                is_clicked_l = False
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+                is_clicked_r = True
+            if event.type == pygame.MOUSEBUTTONUP and event.button == 3:
+                is_clicked_r = False
 
-
-        if event.type == pygame.MOUSEMOTION:
-            pos = event.pos
-
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2:  # нажатие на колесико мыши дает +1 зелье хп
-            inventory.plus_hp_potion()
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_6:  # восстанавливает до 5хп
-            inventory.hp_plus()
-
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 4:  # колесико мыши вверх дает +1 зелье урона
-            if inventory.current_slot != len(inventory.items) - 1:
-                inventory.current_slot += 1
-                inventory.weapon_frame.rect.x += inventory_slot_width
-            else:
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_1:
                 inventory.current_slot = 0
                 inventory.weapon_frame.rect.x = 0
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_2:
+                inventory.current_slot = 1
+                inventory.weapon_frame.rect.x = inventory_slot_width
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_3:
+                inventory.current_slot = 2
+                inventory.weapon_frame.rect.x = inventory_slot_width * 2
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_4:
+                inventory.current_slot = 3
+                inventory.weapon_frame.rect.x = inventory_slot_width * 3
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_5:
+                inventory.current_slot = 4
+                inventory.weapon_frame.rect.x = inventory_slot_width * 4
 
-            inventory.plus_rage_potion()
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_7:  # активирует зелье урона
-            inventory.plus_damage()
 
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 5:  # колесико мыши вниз дает +1 зелье неуязвимости
-            if inventory.current_slot != 0:
-                inventory.current_slot -= 1
-                inventory.weapon_frame.rect.x -= inventory_slot_width
-            else:
-                inventory.current_slot = len(inventory.items) - 1
-                inventory.weapon_frame.rect.x = inventory_slot_width * (len(inventory.items) - 1)
+            if event.type == pygame.MOUSEMOTION:
+                pos = event.pos
 
-            inventory.plus_armor_potion()
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_8:  # активирует зелье неуязвимости
-            inventory.plus_armor()
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2:  # нажатие на колесико мыши дает +1 зелье хп
+                inventory.plus_hp_potion()
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_6:  # восстанавливает до 5хп
+                inventory.hp_plus()
 
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:  # колесико мыши вниз дает +1 зелье скорости
-            inventory.plus_speed_potion()
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_9:  # активирует зелье скорости
-            inventory.plus_speed()
-        if event.type == pygame.QUIT:
-            running = False
-        if event.type == pygame.KEYDOWN:  # назначаем движение
-            if event.key == pygame.K_w:  # вверх
-                direction[1] -= 1
-            if event.key == pygame.K_d:  # вправо
-                direction[0] += 1
-            if event.key == pygame.K_s:  # вниз
-                direction[1] += 1
-            if event.key == pygame.K_a:  # влево
-                direction[0] -= 1
-        if event.type == pygame.KEYUP:  # убираем движение по направлениям, если клавишу отпустили
-            if event.key == pygame.K_w:
-                direction[1] += 1
-            if event.key == pygame.K_d:
-                direction[0] -= 1
-            if event.key == pygame.K_s:
-                direction[1] -= 1
-            if event.key == pygame.K_a:
-                direction[0] += 1
-    if int(inventory.speed_timer) > 0 and flag:
-        player.speed = 5
-        player.timer_x = Timer(player.speed)
-        player.timer_y = Timer(player.speed)
-        flag = 0
-    elif int(inventory.speed_timer) == 0 and not flag:
-        player.speed = 8
-        player.timer_x = Timer(player.speed)
-        player.timer_y = Timer(player.speed)
-        flag = 1
-    if is_clicked_r:
-        pass
-    if is_clicked_l:
-        inventory.use_weapon()
-    player.make_move(*direction)
-    monster_group.update()
-    player_group.update()
-    attack_group.update()
-    weapon_group.update()
-    game_over_group.update()
-    camera.update(player)
-    # обновляем положение всех спрайтов
-    for sprite in all_sprites:
-        if sprite not in static_sprites:
-            camera.apply(sprite)
-    screen.fill((255, 255, 255))
-    tiles_group.draw(
-        screen)  # спрайты клеток и сущности рисуются отдельно, чтобы спрайты клеток не наслаивались на сущностей
-    entity_group.draw(screen)
-    attack_group.draw(screen)
-    for i in entity_group:  # всем сущностям и герою выводим полоску хп
-        draw_hp(i)
-    inventory.quantity_rendering()
-    game_over_group.draw(screen)
-    clock.tick(FPS)
-    pygame.display.flip()
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 4:  # колесико мыши вверх дает +1 зелье урона
+                if inventory.current_slot != len(inventory.items) - 1:
+                    inventory.current_slot += 1
+                    inventory.weapon_frame.rect.x += inventory_slot_width
+                else:
+                    inventory.current_slot = 0
+                    inventory.weapon_frame.rect.x = 0
+
+                inventory.plus_rage_potion()
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_7:  # активирует зелье урона
+                inventory.plus_damage()
+
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 5:  # колесико мыши вниз дает +1 зелье неуязвимости
+                if inventory.current_slot != 0:
+                    inventory.current_slot -= 1
+                    inventory.weapon_frame.rect.x -= inventory_slot_width
+                else:
+                    inventory.current_slot = len(inventory.items) - 1
+                    inventory.weapon_frame.rect.x = inventory_slot_width * (len(inventory.items) - 1)
+
+                inventory.plus_armor_potion()
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_8:  # активирует зелье неуязвимости
+                inventory.plus_armor()
+
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:  # колесико мыши вниз дает +1 зелье скорости
+                inventory.plus_speed_potion()
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_9:  # активирует зелье скорости
+                inventory.plus_speed()
+            if event.type == pygame.QUIT:
+                if is_game_over:
+                    exit(0)
+                running = False
+            if event.type == pygame.KEYDOWN:  # назначаем движение
+                if event.key == pygame.K_w:  # вверх
+                    direction[1] -= 1
+                if event.key == pygame.K_d:  # вправо
+                    direction[0] += 1
+                if event.key == pygame.K_s:  # вниз
+                    direction[1] += 1
+                if event.key == pygame.K_a:  # влево
+                    direction[0] -= 1
+            if event.type == pygame.KEYUP:  # убираем движение по направлениям, если клавишу отпустили
+                if event.key == pygame.K_w:
+                    direction[1] += 1
+                if event.key == pygame.K_d:
+                    direction[0] -= 1
+                if event.key == pygame.K_s:
+                    direction[1] -= 1
+                if event.key == pygame.K_a:
+                    direction[0] += 1
+        if int(inventory.speed_timer) > 0 and flag:
+            player.speed = 5
+            player.timer_x = Timer(player.speed)
+            player.timer_y = Timer(player.speed)
+            flag = 0
+        elif int(inventory.speed_timer) == 0 and not flag:
+            player.speed = 8
+            player.timer_x = Timer(player.speed)
+            player.timer_y = Timer(player.speed)
+            flag = 1
+        if is_clicked_r:
+            pass
+        if is_clicked_l:
+            inventory.use_weapon()
+        player.make_move(*direction)
+        monster_group.update()
+        player_group.update()
+        attack_group.update()
+        weapon_group.update()
+        game_over_group.update()
+        camera.update(player)
+        # обновляем положение всех спрайтов
+        for sprite in all_sprites:
+            if sprite not in static_sprites:
+                camera.apply(sprite)
+        screen.fill((255, 255, 255))
+        tiles_group.draw(
+            screen)  # спрайты клеток и сущности рисуются отдельно, чтобы спрайты клеток не наслаивались на сущностей
+        entity_group.draw(screen)
+        attack_group.draw(screen)
+        for i in entity_group:  # всем сущностям и герою выводим полоску хп
+            draw_hp(i)
+        inventory.quantity_rendering()
+        game_over_group.draw(screen)
+        clock.tick(FPS)
+        pygame.display.flip()
