@@ -54,9 +54,14 @@ images = {
     'player': pygame.transform.scale(load_image('mar.png'), (tile_width, tile_height)),
     'game_over': pygame.transform.scale(load_image('gameover.png'), (WIDTH, HEIGHT)),
     'inventory_slot': pygame.transform.scale(load_image('inventory_slot.png'), (inventory_slot_width, inventory_slot_width)),
+    'inventory_slot2': pygame.transform.scale(load_image('inventory_slot2.png'), (inventory_slot_width, inventory_slot_width)),
     'sword': load_image('sword.png'),
     'gun': load_image('gun.png'),
     'frame': pygame.transform.scale(load_image('frame.png'), (inventory_slot_width, inventory_slot_width)),
+    'health_potion': pygame.transform.scale(load_image('health_potion.png'), (inventory_slot_width, inventory_slot_width)),
+    'shield_potion': pygame.transform.scale(load_image('shield_potion.png'), (inventory_slot_width, inventory_slot_width)),
+    'rage_potion': pygame.transform.scale(load_image('rage_potion.png'), (inventory_slot_width, inventory_slot_width)),
+    'speed_potion': pygame.transform.scale(load_image('speed_potion.png'), (inventory_slot_width, inventory_slot_width)),
 }
 FPS = 60
 
@@ -600,17 +605,10 @@ class Board:  # класс матрицы доски
             n -= 1
         return lst[::-1]
 
-class InventorySlot(pygame.sprite.Sprite):
-    def __init__(self, x, y):
+class StaticSprite(pygame.sprite.Sprite):
+    def __init__(self, x, y, img_name):
         super().__init__(all_sprites, inventar_group, static_sprites)
-        self.image = images['inventory_slot']
-        self.rect = self.image.get_rect().move(
-            x, y)
-        self.mask = pygame.mask.from_surface(self.image)
-class Frame(pygame.sprite.Sprite):
-    def __init__(self, x, y):
-        super().__init__(all_sprites, inventar_group, static_sprites)
-        self.image = images['frame']
+        self.image = images[img_name]
         self.rect = self.image.get_rect().move(
             x, y)
         self.mask = pygame.mask.from_surface(self.image)
@@ -636,16 +634,22 @@ class Inventory():   # класс иневентаря. В игре он сни�
         self.armor_timer = Timer(0)  # таймер для зелий неуязвимости
         self.rage_timer = Timer(0)  # таймер для зелий увелмчения урона
         self.speed_timer = Timer(0)  # таймер для зелий скорости
-        InventorySlot(0, HEIGHT - inventory_slot_width)
-        InventorySlot(inventory_slot_width, HEIGHT - inventory_slot_width)
-        InventorySlot(inventory_slot_width * 2, HEIGHT - inventory_slot_width)
-        InventorySlot(inventory_slot_width * 3, HEIGHT - inventory_slot_width)
-        InventorySlot(inventory_slot_width * 4, HEIGHT - inventory_slot_width)
-        InventorySlot(inventory_slot_width * 5 + 10, HEIGHT - inventory_slot_width)
-        InventorySlot(inventory_slot_width * 6 + 10, HEIGHT - inventory_slot_width)
-        InventorySlot(inventory_slot_width * 7 + 10, HEIGHT - inventory_slot_width)
-        InventorySlot(inventory_slot_width * 8 + 10, HEIGHT - inventory_slot_width)
-        self.weapon_frame = Frame(0, HEIGHT - inventory_slot_width)
+        StaticSprite(0, HEIGHT - inventory_slot_width, 'inventory_slot')
+        StaticSprite(inventory_slot_width, HEIGHT - inventory_slot_width, 'inventory_slot')
+        StaticSprite(inventory_slot_width * 2, HEIGHT - inventory_slot_width, 'inventory_slot')
+        StaticSprite(inventory_slot_width * 3, HEIGHT - inventory_slot_width, 'inventory_slot')
+        StaticSprite(inventory_slot_width * 4, HEIGHT - inventory_slot_width, 'inventory_slot')
+
+        StaticSprite(inventory_slot_width * 5 + 10, HEIGHT - inventory_slot_width, 'health_potion')
+        StaticSprite(inventory_slot_width * 6 + 10, HEIGHT - inventory_slot_width, 'rage_potion')
+        StaticSprite(inventory_slot_width * 7 + 10, HEIGHT - inventory_slot_width, 'shield_potion')
+        StaticSprite(inventory_slot_width * 8 + 10, HEIGHT - inventory_slot_width, 'speed_potion')
+
+        StaticSprite(inventory_slot_width * 5 + 10, HEIGHT - inventory_slot_width, 'inventory_slot2')
+        StaticSprite(inventory_slot_width * 6 + 10, HEIGHT - inventory_slot_width, 'inventory_slot2')
+        StaticSprite(inventory_slot_width * 7 + 10, HEIGHT - inventory_slot_width, 'inventory_slot2')
+        StaticSprite(inventory_slot_width * 8 + 10, HEIGHT - inventory_slot_width, 'inventory_slot2')
+        self.weapon_frame = StaticSprite(0, HEIGHT - inventory_slot_width, 'frame')
 
     def use_weapon(self):
         if self.current_slot < len(self.items):
