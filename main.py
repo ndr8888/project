@@ -273,7 +273,7 @@ class CloseMonster(pygame.sprite.Sprite):
     def update(self):
         if not self.close_mode:
             if abs(self.pos_x - player.pos_x) <= self.rang_max and abs(self.pos_y - player.pos_y) <= self.rang_max:
-                self.weapon.use(player.rect.x, player.rect.y)
+                self.weapon.use(player.rect.x + player.x_move * tile_width, player.rect.y + player.y_move * tile_height)
         else:
             if abs(self.pos_x - player.pos_x) <= self.rang_min and abs(self.pos_y - player.pos_y) <= self.rang_min:
                 self.weapon.use(player.rect.x, player.rect.y)
