@@ -54,8 +54,8 @@ def load_image(name, colorkey=None):
 
 
 images = {
-    'wall': pygame.transform.scale(load_image('wall.png'), (tile_width, tile_height)),
-    'empty': pygame.transform.scale(load_image('grass1.png'), (tile_width, tile_height)),
+    'wall': pygame.transform.scale(load_image('box.png'), (tile_width, tile_height)),
+    'empty': pygame.transform.scale(load_image('grass.png'), (tile_width, tile_height)),
     'bullet': load_image('bomb2.png'),
     'close_attack': load_image('attack.png'),
     'close_attack1': load_image('attack1.png'),
@@ -701,7 +701,7 @@ class Gameover(pygame.sprite.Sprite):
 def draw_hp(entity):
     pygame.draw.rect(screen, (255, 0, 0), (entity.rect.x, entity.rect.y - 20,
                                            int(tile_width * (entity.hp / entity.hp_max)), 15))
-    pygame.draw.rect(screen, (100, 100, 100), (entity.rect.x, entity.rect.y - 20,
+    pygame.draw.rect(screen, (0, 0, 0), (entity.rect.x, entity.rect.y - 20,
                                          tile_width, 15), 2)
     font = pygame.font.Font(None, 20)
     text = font.render(str(entity.hp), True, pygame.Color('white'))
@@ -715,7 +715,7 @@ camera = Camera()
 direction = [0, 0]
 is_clicked_r, is_clicked_l = False, False
 close_weapon, range_weapon = CloseWeapon('close_attack1', 'close_attack1', -50, -50, player, player_group, 2, FPS // 2,
-                                         rang=4.5), BulletWeapon('bullet', 'bullet', -50, -50,
+                                         rang=4.25), BulletWeapon('bullet', 'bullet', -50, -50,
                                                                player,
                                                                player_group,
                                                                1.5, FPS // 2,
@@ -809,7 +809,7 @@ while running:
     for sprite in all_sprites:
         if sprite not in static_sprites:
             camera.apply(sprite)
-    screen.fill((0, 0, 0))
+    screen.fill((255, 255, 255))
     tiles_group.draw(
         screen)  # спрайты клеток и сущности рисуются отдельно, чтобы спрайты клеток не наслаивались на сущностей
     entity_group.draw(screen)
