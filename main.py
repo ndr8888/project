@@ -20,6 +20,7 @@ attack_group = pygame.sprite.Group()
 static_sprites = pygame.sprite.Group()
 weapon_group = pygame.sprite.Group()
 inventar_group = pygame.sprite.Group()
+game_over_group = pygame.sprite.Group()
 
 
 class Timer:
@@ -53,8 +54,8 @@ def load_image(name, colorkey=None):
 
 
 images = {
-    'wall': pygame.transform.scale(load_image('box.png'), (tile_width, tile_height)),
-    'empty': pygame.transform.scale(load_image('grass.png'), (tile_width, tile_height)),
+    'wall': pygame.transform.scale(load_image('wall.png'), (tile_width, tile_height)),
+    'empty': pygame.transform.scale(load_image('grass1.png'), (tile_width, tile_height)),
     'bullet': load_image('bomb2.png'),
     'close_attack': load_image('attack.png'),
     'close_attack1': load_image('attack1.png'),
@@ -62,7 +63,8 @@ images = {
     'empty_image': load_image('empty_image.png'),
     'monster': pygame.transform.scale(load_image('enemy.png'), (tile_width, tile_height)),
     'monster1': pygame.transform.scale(load_image('enemy1.png'), (tile_width, tile_height)),
-    'player': pygame.transform.scale(load_image('mar.png'), (tile_width, tile_height))
+    'player': pygame.transform.scale(load_image('mar.png'), (tile_width, tile_height)),
+    'game_over': pygame.transform.scale(load_image('gameover.png'), (WIDTH, HEIGHT))
 }
 FPS = 60
 
@@ -231,6 +233,7 @@ class Player(pygame.sprite.Sprite):
         else:
             self.hp -= n * 1
         if self.hp <= 0:
+            Gameover()
             self.kill()
 
 
@@ -238,7 +241,7 @@ class Player(pygame.sprite.Sprite):
 class CloseMonster(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         self.weapon = CloseWeapon('empty_image', 'close_attack', -50, -50, self, monster_group, 1, FPS // 2,
-                                  rang=2.5)  #изменяемый
+                                  rang=2.25)  #изменяемый
         # self.weapon = BulletWeapon(-50, -50, self, monster_group, 1, FPS, speed=10, rang=400)
         self.hp_max = 10  #
         self.hp = self.hp_max #
@@ -391,6 +394,7 @@ class CloseAttack(pygame.sprite.Sprite):
         self.owner = owner
 
     def update(self):
+        self.rect.x, self.rect.y = self.owner.rect.x - self.rect.w // 2 + tile_width * 0.5, self.owner.rect.y - self.rect.h // 2 + tile_width * 0.5
         for i in entity_group:  # проверка на столкновение с монстрами
             if pygame.sprite.collide_mask(self, i) and i not in self.fraction and i not in self.damaged_lst and (
                     is_linear_path(*self.owner.rect.center, *i.rect.topleft, owner=self.owner, target=i,
@@ -598,7 +602,7 @@ class Inventory(pygame.sprite.Sprite):   # класс иневентаря. В �
     image = load_image('инвентарь.png')
 
     def __init__(self):
-        super().__init__(all_sprites, inventar_group)  # добавляем в группы спрайтов
+        super().__init__(all_sprites, inventar_group, static_sprites)  # добавляем в группы спрайтов
 
         self.hp_potions = 0  # кол-во зелий, которые лечат 5хп
         self.rage_potion = 0  # кол-во зелий, которые увеличивают урон в 2 раза на 10 сек
@@ -612,10 +616,6 @@ class Inventory(pygame.sprite.Sprite):   # класс иневентаря. В �
         self.image = Inventory.image
         self.rect = self.image.get_rect()
         self.rect.x = 0  # положение
-        self.rect.y = 700
-
-    def update(self):
-        self.rect.x = 0  # чтобы передвигался вместе с камерой
         self.rect.y = 700
 
     def plus_hp_potion(self):  # +1 зелье, которое лечит 5хп
@@ -682,11 +682,26 @@ class Inventory(pygame.sprite.Sprite):   # класс иневентаря. В �
         inventory.armor_timer.tick()  # если зелье активно, то уменьшаем время действия до 0. Иначе 0
         inventory.speed_timer.tick()
 
+class Gameover(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__(all_sprites, game_over_group, static_sprites)
+        self.image = images['game_over']
+        self.rect = self.image.get_rect()
+        self.state = True
+        self.rect.x = -WIDTH
+        self.rect.y = 0
+
+    def update(self):
+        if self.state and self.rect.x + self.rect.width < WIDTH:
+            self.rect.x += 20
+        else:
+            self.rect.x = 0
+
 
 def draw_hp(entity):
     pygame.draw.rect(screen, (255, 0, 0), (entity.rect.x, entity.rect.y - 20,
                                            int(tile_width * (entity.hp / entity.hp_max)), 15))
-    pygame.draw.rect(screen, (0, 0, 0), (entity.rect.x, entity.rect.y - 20,
+    pygame.draw.rect(screen, (100, 100, 100), (entity.rect.x, entity.rect.y - 20,
                                          tile_width, 15), 2)
     font = pygame.font.Font(None, 20)
     text = font.render(str(entity.hp), True, pygame.Color('white'))
@@ -700,10 +715,10 @@ camera = Camera()
 direction = [0, 0]
 is_clicked_r, is_clicked_l = False, False
 close_weapon, range_weapon = CloseWeapon('close_attack1', 'close_attack1', -50, -50, player, player_group, 2, FPS // 2,
-                                         rang=4), BulletWeapon('bullet', 'bullet', -50, -50,
+                                         rang=4.5), BulletWeapon('bullet', 'bullet', -50, -50,
                                                                player,
                                                                player_group,
-                                                               1.5, FPS // 3,
+                                                               1.5, FPS // 2,
                                                                speed=10,
                                                                rang=400)
 inventory = Inventory()
@@ -788,11 +803,13 @@ while running:
     player_group.update()
     attack_group.update()
     weapon_group.update()
+    game_over_group.update()
     camera.update(player)
     # обновляем положение всех спрайтов
     for sprite in all_sprites:
-        camera.apply(sprite)
-    screen.fill((255, 255, 255))
+        if sprite not in static_sprites:
+            camera.apply(sprite)
+    screen.fill((0, 0, 0))
     tiles_group.draw(
         screen)  # спрайты клеток и сущности рисуются отдельно, чтобы спрайты клеток не наслаивались на сущностей
     entity_group.draw(screen)
@@ -803,5 +820,6 @@ while running:
     inventar_group.draw(screen)  # выводим его на экран
     text = font_for_inventory.render(f"{inventory.hp_potions}", True, (255, 0, 0))  # кол-во зелий
     screen.blit(text, (35, 740))  # выводим кол-во зелий около зелья
+    game_over_group.draw(screen)
     clock.tick(FPS)
     pygame.display.flip()
