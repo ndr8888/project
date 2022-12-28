@@ -168,7 +168,6 @@ class Player(pygame.sprite.Sprite):
         self.image = images['player']
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
-        self.x, self.y = tile_width * pos_x, tile_height * pos_y
         self.mask = pygame.mask.from_surface(self.image)
         self.x_move, self.y_move = 0, 0
 
@@ -226,9 +225,13 @@ class Player(pygame.sprite.Sprite):
                 self.y_move = 0
 
     def damage(self, n):
-        self.hp -= n
+        if int(inventory.armor_timer):
+            self.hp -= n * 0
+        else:
+            self.hp -= n * 1
         if self.hp <= 0:
             self.kill()
+
 
 
 class CloseMonster(pygame.sprite.Sprite):
@@ -257,13 +260,6 @@ class CloseMonster(pygame.sprite.Sprite):
         return 'monster'
 
     def update(self):
-        if not self.close_mode:
-            if abs(self.pos_x - player.pos_x) <= self.rang_max and abs(self.pos_y - player.pos_y) <= self.rang_max:
-                self.weapon.use(player.rect.x, player.rect.y)
-        else:
-            if abs(self.pos_x - player.pos_x) <= self.rang_min and abs(self.pos_y - player.pos_y) <= self.rang_min:
-                self.weapon.use(player.rect.x, player.rect.y)
-
         if int(self.timer_x) == 0 and int(self.timer_y) == 0:
             path = board.get_path(self.pos_x, self.pos_y, player.pos_x, player.pos_y)
             next_cell = path[1]
@@ -314,8 +310,7 @@ class CloseMonster(pygame.sprite.Sprite):
                 self.y_move = 0
 
     def damage(self, n):
-        if int(inventory.rage_timer) != 0:  # если действует зелье увеличения урона
-            print(1)
+        if int(inventory.rage_timer):  # если действует зелье увеличения урона
             self.hp -= n * 2  # то урон х2
         else:
             self.hp -= n * 1
@@ -600,9 +595,11 @@ class Inventory(pygame.sprite.Sprite):   # класс иневентаря. В �
         self.hp_potions = 0  # кол-во зелий, которые лечат 5хп
         self.rage_potion = 0  # кол-во зелий, которые увеличивают урон в 2 раза на 10 сек
         self.armor_potion = 0  # кол-во зелий, которые уменьшают получаемый урон до 0 на 5 сек
+        self.speed_potion = 0  # кол-во зелий, которые увеличивают скорость в 2 раза
 
         self.armor_timer = Timer(0)  # таймер для зелий неуязвимости
         self.rage_timer = Timer(0)  # таймер для зелий увелмчения урона
+        self.speed_timer = Timer(0)  # таймер для зелий скорости
 
         self.image = Inventory.image
         self.rect = self.image.get_rect()
@@ -622,27 +619,35 @@ class Inventory(pygame.sprite.Sprite):   # класс иневентаря. В �
     def plus_armor_potion(self):  # +1 зелье, которое уменьшает получаемый урон до 0 на 5 сек
         self.armor_potion += 1
 
+    def plus_speed_potion(self):  # +1 зелье, которое уменьшает получаемый урон до 0 на 5 сек
+        self.speed_potion += 1
+
     def hp_plus(self):
         if self.hp_potions:  # если есть зелье хп
             if player.hp + 5 <= player.hp_max:  # добавляем 5хп, если не привысим максимальное кол-во хп
                 player.hp += 5  # +5 хп
                 self.hp_potions -= 1  # -1 зелье, которое лечит 5 хп
-            elif player.hp < player.hp_max:  # если +5 преdвысит максимальное кол-во хп, то добавляем до максимального
+            elif player.hp < player.hp_max:  # если +5 превысит максимальное кол-во хп, то добавляем до максимального
                 player.hp = player.hp_max  # теперь хп = максимальные хп
                 self.hp_potions -= 1  # -1 зелье, которое лечит 5 хп
 
     def plus_damage(self):
         if self.rage_potion and int(self.rage_timer) == 0:  # если есть зелье ярости и оно неактивно
-            print(3)
             self.rage_potion -= 1  # поглощаем 1 зелье
-            self.rage_timer = Timer(FPS * 10)  # заводим таймер на 10 сек (60 тиков в секунду)
+            self.rage_timer = Timer(600)  # заводим таймер на 10 сек (60 тиков в секунду)
             self.rage_timer.start()  # начинаем отсчёт
 
     def plus_armor(self):
         if self.armor_potion and int(self.armor_timer) == 0:  # если есть зелье неуязвимости и оно неактивно
             self.armor_potion -= 1  # поглощаем 1 зелье
-            self.armor_timer = Timer(FPS * 5)  # заводим таймер на 5 сек (60 тиков в секунду)
+            self.armor_timer = Timer(300)  # заводим таймер на 5 сек (60 тиков в секунду)
             self.armor_timer.start()  # начинаем отсчёт
+
+    def plus_speed(self):
+        if self.speed_potion and int(self.speed_timer) == 0:  # если есть зелья скорости
+            self.speed_potion -= 1  # поглощаем 1 зелье
+            self.speed_timer = Timer(1800)  # заводим таймер на 30 сек
+            self.speed_timer.start()  # начинаем отсчёт
 
     def quantity_rendering(self):  # отображение всего инвентаря
         inventar_group.update()  # обновляем положение инвентаря
@@ -653,6 +658,8 @@ class Inventory(pygame.sprite.Sprite):   # класс иневентаря. В �
         screen.blit(text, (105, 740))  # выводим кол-во зелий ярости около зелья ярости
         text = font_for_inventory.render(f"{inventory.armor_potion}", True, (255, 0, 0))  # кол-во зелий неуязвимости
         screen.blit(text, (155, 740))  # выводим кол-во зелий неуязвимости около зелья неуязвимости
+        text = font_for_inventory.render(f"{inventory.speed_potion}", True, (255, 0, 0))  # кол-во зелий скорости
+        screen.blit(text, (205, 740))  # выводим кол-во зелий скорости около зелья скорости
 
         text = font_for_inventory.render(f"{1}", True, (0, 255, 0))  # зелье хп активируется при нажатии на 1
         screen.blit(text, (10, 700))  # выводим зеленым шрифтом цифру 1
@@ -660,9 +667,12 @@ class Inventory(pygame.sprite.Sprite):   # класс иневентаря. В �
         screen.blit(text, (80, 700))  # выводим зеленым шрифтом цифру 2
         text = font_for_inventory.render(f"{3}", True, (0, 255, 0))  # зелье неуязвимости активируется при нажатии на 3
         screen.blit(text, (130, 700))  # выводим зеленым шрифтом цифру 3
+        text = font_for_inventory.render(f"{4}", True, (0, 255, 0))  # зелье скорости активируется при нажатии на 4
+        screen.blit(text, (180, 700))  # выводим зеленым шрифтом цифру 4
 
         inventory.rage_timer.tick()  # если зелье активно, то уменьшаем время действия до 0. Иначе 0
         inventory.armor_timer.tick()  # если зелье активно, то уменьшаем время действия до 0. Иначе 0
+        inventory.speed_timer.tick()
 
 
 def draw_hp(entity):
@@ -674,7 +684,7 @@ def draw_hp(entity):
     text = font.render(str(entity.hp), True, pygame.Color('white'))
     screen.blit(text, (entity.rect.x, entity.rect.y - text.get_height() - 20))
 
-
+flag = 1
 running = True
 pos = 0, 0
 board, player, level_x, level_y = generate_level(load_level(map_name))
@@ -690,16 +700,12 @@ close_weapon, range_weapon = CloseWeapon('close_attack1', 'close_attack1', -50, 
                                                                rang=400)
 inventory = Inventory()
 font_for_inventory = pygame.font.Font(None, 20)
-player.speed = 5
 while running:
     # изменяем ракурс камеры
     # внутри игрового цикла ещё один цикл
     # приёма и обработки сообщений
     for event in pygame.event.get():
         # при закрытии окна
-        if event.type == pygame.QUIT:
-            running = False
-
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             is_clicked_l = True
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
@@ -708,6 +714,10 @@ while running:
             is_clicked_r = True
         if event.type == pygame.MOUSEBUTTONUP and event.button == 3:
             is_clicked_r = False
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            is_clicked = True
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            is_clicked = False
 
         if event.type == pygame.MOUSEMOTION:
             pos = event.pos
@@ -727,24 +737,40 @@ while running:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_3:  # активирует зелье неуязвимости
             inventory.plus_armor()
 
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:  # колесико мыши вниз дает +1 зелье скорости
+            inventory.plus_speed_potion()
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_4:  # активирует зелье скорости
+            inventory.plus_speed()
+        if event.type == pygame.QUIT:
+            running = False
         if event.type == pygame.KEYDOWN:  # назначаем движение
-            if event.key == pygame.K_w or event.key == pygame.K_UP:  # вверх
+            if event.key == pygame.K_w:  # вверх
                 direction[1] -= 1
-            if event.key == pygame.K_d or event.key == pygame.K_RIGHT:  # вправо
+            if event.key == pygame.K_d:  # вправо
                 direction[0] += 1
-            if event.key == pygame.K_s or event.key == pygame.K_DOWN:  # вниз
+            if event.key == pygame.K_s:  # вниз
                 direction[1] += 1
-            if event.key == pygame.K_a or event.key == pygame.K_LEFT:  # влево
+            if event.key == pygame.K_a:  # влево
                 direction[0] -= 1
         if event.type == pygame.KEYUP:  # убираем движение по направлениям, если клавишу отпустили
-            if event.key == pygame.K_w or event.key == pygame.K_UP:
+            if event.key == pygame.K_w:
                 direction[1] += 1
-            if event.key == pygame.K_d or event.key == pygame.K_RIGHT:
+            if event.key == pygame.K_d:
                 direction[0] -= 1
-            if event.key == pygame.K_s or event.key == pygame.K_DOWN:
+            if event.key == pygame.K_s:
                 direction[1] -= 1
-            if event.key == pygame.K_a or event.key == pygame.K_LEFT:
+            if event.key == pygame.K_a:
                 direction[0] += 1
+    if int(inventory.speed_timer) > 0 and flag:
+        player.speed = 5
+        player.timer_x = Timer(player.speed)
+        player.timer_y = Timer(player.speed)
+        flag = 0
+    elif int(inventory.speed_timer) == 0 and not flag:
+        player.speed = 8
+        player.timer_x = Timer(player.speed)
+        player.timer_y = Timer(player.speed)
+        flag = 1
     if is_clicked_r:
         close_weapon.use(*pos)
     if is_clicked_l:
@@ -763,7 +789,7 @@ while running:
         screen)  # спрайты клеток и сущности рисуются отдельно, чтобы спрайты клеток не наслаивались на сущностей
     entity_group.draw(screen)
     attack_group.draw(screen)
-    for i in entity_group:
+    for i in entity_group:  # всем сущностям и герою выводим полоску хп
         draw_hp(i)
     inventar_group.update()  # обновляем положение инвентаря
     inventar_group.draw(screen)  # выводим его на экран
@@ -771,5 +797,3 @@ while running:
     screen.blit(text, (35, 740))  # выводим кол-во зелий около зелья
     clock.tick(FPS)
     pygame.display.flip()
-# создадим группу, содержащую все спрайты
-all_sprites = pygame.sprite.Group()
