@@ -170,6 +170,7 @@ class Player(pygame.sprite.Sprite):
             tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
         self.x_move, self.y_move = 0, 0
+        self.x, self.y = self.rect.topleft
 
     def type(self):
         return 'player'
@@ -236,7 +237,7 @@ class Player(pygame.sprite.Sprite):
 
 class CloseMonster(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
-        self.weapon = CloseWeapon('empty_image', 'close_attack1', -50, -50, self, monster_group, 1, FPS // 2,
+        self.weapon = CloseWeapon('empty_image', 'close_attack', -50, -50, self, monster_group, 1, FPS // 2,
                                   rang=2.5)  #изменяемый
         # self.weapon = BulletWeapon(-50, -50, self, monster_group, 1, FPS, speed=10, rang=400)
         self.hp_max = 10  #
@@ -260,6 +261,13 @@ class CloseMonster(pygame.sprite.Sprite):
         return 'monster'
 
     def update(self):
+        if not self.close_mode:
+            if abs(self.pos_x - player.pos_x) <= self.rang_max and abs(self.pos_y - player.pos_y) <= self.rang_max:
+                self.weapon.use(player.rect.x, player.rect.y)
+        else:
+            if abs(self.pos_x - player.pos_x) <= self.rang_min and abs(self.pos_y - player.pos_y) <= self.rang_min:
+                self.weapon.use(player.rect.x, player.rect.y)
+
         if int(self.timer_x) == 0 and int(self.timer_y) == 0:
             path = board.get_path(self.pos_x, self.pos_y, player.pos_x, player.pos_y)
             next_cell = path[1]
