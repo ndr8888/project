@@ -62,6 +62,8 @@ images = {
     'shield_potion': pygame.transform.scale(load_image('shield_potion.png'), (inventory_slot_width, inventory_slot_width)),
     'rage_potion': pygame.transform.scale(load_image('rage_potion.png'), (inventory_slot_width, inventory_slot_width)),
     'speed_potion': pygame.transform.scale(load_image('speed_potion.png'), (inventory_slot_width, inventory_slot_width)),
+    'teleport': pygame.transform.scale(load_image('teleport.png'), (tile_width, tile_height)),
+    'teleport1': pygame.transform.scale(load_image('teleport1.png'), (tile_width, tile_height)),
 }
 FPS = 60
 
@@ -125,6 +127,22 @@ class BackgroundTile(pygame.sprite.Sprite):  # класс фоновой кар�
             tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
 
+class Teleport(BackgroundTile):
+    def __init__(self, pos_x, pos_y):
+        super().__init__(pos_x, pos_y)
+        self.image = images['teleport1']
+        self.pos_x, self.pos_y = pos_x, pos_y
+
+    def update(self):
+        if len(monster_group) == 0:
+            self.image = images['teleport']
+        if player.pos_x == self.pos_x and player.pos_y == self.pos_y and len(monster_group) == 0:
+            global running
+            running = False
+
+    def type(self):
+        return 'empty'
+
 
 class Wall(pygame.sprite.Sprite):  # класс стены
     def __init__(self, pos_x, pos_y):
@@ -172,7 +190,6 @@ class Player(pygame.sprite.Sprite):
         self.x, self.y = self.rect.topleft
 
     def set_at_position(self, pos_x, pos_y):
-        print(1)
         self.timer_x = Timer(self.speed)
         self.timer_y = Timer(self.speed)
         self.diagonal = False  # переменная, нужная для диагонального хода игроком
@@ -340,7 +357,7 @@ class CloseMonster(pygame.sprite.Sprite):
 class RangedMonster(CloseMonster):
     def __init__(self, *args):
         super().__init__(*args)
-        self.weapon = BulletWeapon('empty_image', 'bullet', -50, -50, self, monster_group, 1, FPS, speed=10, rang=400) #
+        self.weapon = BulletWeapon('empty_image', 'bullet', -50, -50, self, monster_group, 1, FPS, speed=7, rang=400) #
         self.hp_max = 8  #
         self.hp = self.hp_max
         self.rang_min = 5  #
@@ -483,6 +500,9 @@ def generate_level(level):
                 table[x].append(Empty())
             elif level[y][x] == '#':
                 table[x].append(Wall(x, y))
+            elif level[y][x] == '&':
+                BackgroundTile(x, y)
+                table[x].append(Teleport(x, y))
             elif level[y][x] == '@':
                 BackgroundTile(x, y)
                 player_coords = x, y
@@ -754,6 +774,7 @@ entity_group = pygame.sprite.Group()
 static_sprites = pygame.sprite.Group()
 weapon_group = pygame.sprite.Group()
 player = Player(0, 0)
+direction = [0, 0]
 weapon_lst = [CloseWeapon('sword', 'close_attack1', -50, -50, player, player_group, 2, FPS // 2,
                                          rang=4.25, name='меч'), BulletWeapon('gun', 'bullet', -50, -50,
                                                                player,
@@ -762,7 +783,7 @@ weapon_lst = [CloseWeapon('sword', 'close_attack1', -50, -50, player, player_gro
                                                                speed=10,
                                                                rang=400, name='пистолет')]
 
-for map_name in ['map.txt']:
+for map_name in ['map.txt', 'map1.txt']:
     is_game_over = False
     tiles_group = pygame.sprite.Group()
     wall_group = pygame.sprite.Group()
@@ -782,7 +803,6 @@ for map_name in ['map.txt']:
     board, player_x, player_y = generate_level(load_level(map_name))
     player.set_at_position(player_x, player_y)
     camera = Camera()
-    direction = [0, 0]
     is_clicked_r, is_clicked_l = False, False
     inventory = Inventory()
     font_for_inventory = pygame.font.Font(None, 20)
@@ -855,9 +875,7 @@ for map_name in ['map.txt']:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_9:  # активирует зелье скорости
                 inventory.plus_speed()
             if event.type == pygame.QUIT:
-                if is_game_over:
-                    exit(0)
-                running = False
+                terminate()
             if event.type == pygame.KEYDOWN:  # назначаем движение
                 if event.key == pygame.K_w:  # вверх
                     direction[1] -= 1
@@ -896,6 +914,7 @@ for map_name in ['map.txt']:
         attack_group.update()
         weapon_group.update()
         game_over_group.update()
+        tiles_group.update()
         camera.update(player)
         # обновляем положение всех спрайтов
         for sprite in all_sprites:
