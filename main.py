@@ -8,7 +8,7 @@ clock = pygame.time.Clock()
 pygame.init()
 size = WIDTH, HEIGHT = 750, 750
 screen = pygame.display.set_mode(size)
-tile_width = tile_height = 40
+tile_width = tile_height = 50
 inventory_slot_width = 60
 
 
@@ -27,9 +27,6 @@ class Timer:
 
     def stop(self):
         self.time = 0
-
-    def __int__(self):
-        return self.time
 
 
 def load_image(name, colorkey=None):
@@ -236,26 +233,26 @@ class Player(pygame.sprite.Sprite):
 
     def make_move(self, x_move, y_move):
         if self.diagonal:
-            if self.x_move == 0 and x_move != 0 and int(self.timer_y) == 0 and board[self.pos_x + x_move][
+            if self.x_move == 0 and x_move != 0 and self.timer_y.time == 0 and board[self.pos_x + x_move][
                 self.pos_y].type() not in ['wall', 'monster', 'blocked']:
                 board[self.pos_x + x_move][self.pos_y] = Blocked()
                 self.x_move = x_move
                 self.timer_x.start()
                 self.diagonal = not self.diagonal
-            if self.y_move == 0 and y_move != 0 and int(self.timer_x) == 0 and board[self.pos_x][
+            if self.y_move == 0 and y_move != 0 and self.timer_x.time == 0 and board[self.pos_x][
                 self.pos_y + y_move].type() not in ['wall', 'monster', 'blocked']:
                 board[self.pos_x][self.pos_y + y_move] = Blocked()
                 self.y_move = y_move
                 self.timer_y.start()
                 self.diagonal = not self.diagonal
         else:
-            if self.y_move == 0 and y_move != 0 and int(self.timer_x) == 0 and board[self.pos_x][
+            if self.y_move == 0 and y_move != 0 and self.timer_x.time == 0 and board[self.pos_x][
                 self.pos_y + y_move].type() not in ['wall', 'monster', 'blocked']:
                 board[self.pos_x][self.pos_y + y_move] = Blocked()
                 self.y_move = y_move
                 self.timer_y.start()
                 self.diagonal = not self.diagonal
-            if self.x_move == 0 and x_move != 0 and int(self.timer_y) == 0 and board[self.pos_x + x_move][
+            if self.x_move == 0 and x_move != 0 and self.timer_y.time == 0 and board[self.pos_x + x_move][
                 self.pos_y].type() not in ['wall', 'monster', 'blocked']:
                 board[self.pos_x + x_move][self.pos_y] = Blocked()
                 self.x_move = x_move
@@ -265,27 +262,25 @@ class Player(pygame.sprite.Sprite):
     def update(self):
         if self.x_move != 0:
             self.timer_x.tick()
-            x_old = self.x
             self.x += self.x_move * (tile_width / self.timer_x.time_max)
-            self.rect.x -= x_old - self.x
-            if int(self.timer_x) == 0:
+            self.rect.x = self.x + camera.dx_total
+            if self.timer_x.time == 0:
                 board[self.pos_x][self.pos_y] = Empty()
                 self.pos_x += self.x_move
                 board[self.pos_x][self.pos_y] = player
                 self.x_move = 0
         if self.y_move != 0:
             self.timer_y.tick()
-            y_old = self.y
             self.y += self.y_move * (tile_width / self.timer_y.time_max)
-            self.rect.y -= y_old - self.y
-            if int(self.timer_y) == 0:
+            self.rect.y = self.y + camera.dy_total
+            if self.timer_y.time == 0:
                 board[self.pos_x][self.pos_y] = Empty()
                 self.pos_y += self.y_move
                 board[self.pos_x][self.pos_y] = player
                 self.y_move = 0
 
     def damage(self, n):
-        if int(inventory.armor_timer):
+        if inventory.armor_timer.time:
             self.hp -= n * 0
         else:
             self.hp -= n * 1
@@ -316,6 +311,7 @@ class CloseMonster(pygame.sprite.Sprite):
             tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
         self.next_cell = 0, 0
+        self.x, self.y = self.rect.topleft
 
     def type(self):
         return 'monster'
@@ -328,7 +324,7 @@ class CloseMonster(pygame.sprite.Sprite):
             if abs(self.pos_x - player.pos_x) <= self.rang_min and abs(self.pos_y - player.pos_y) <= self.rang_min:
                 self.weapon.use(player.rect.x, player.rect.y)
 
-        if int(self.timer_x) == 0 and int(self.timer_y) == 0:
+        if self.timer_x.time == 0 and self.timer_y.time == 0:
             path = board.get_path(self.pos_x, self.pos_y, player.pos_x, player.pos_y)
             next_cell = path[1]
             if board[next_cell[0]][next_cell[1]].type() == 'empty' and abs(
@@ -362,23 +358,26 @@ class CloseMonster(pygame.sprite.Sprite):
 
         if self.x_move != 0:
             self.timer_x.tick()
-            self.rect.x += self.x_move * (tile_width / self.timer_x.time_max)
-            if int(self.timer_x) == 0:
+            x_old = self.x
+            self.x += self.x_move * (tile_width / self.timer_x.time_max)
+            self.rect.x = self.x + camera.dx_total
+            if self.timer_x.time == 0:
                 board[self.next_cell[0]][self.next_cell[1]] = self
                 board[self.pos_x][self.pos_y] = Empty()
                 self.pos_x += self.x_move
                 self.x_move = 0
         if self.y_move != 0:
             self.timer_y.tick()
-            self.rect.y += self.y_move * (tile_width / self.timer_y.time_max)
-            if int(self.timer_y) == 0:
+            self.y += self.y_move * (tile_width / self.timer_y.time_max)
+            self.rect.y = self.y + camera.dy_total
+            if self.timer_y.time == 0:
                 board[self.next_cell[0]][self.next_cell[1]] = self
                 board[self.pos_x][self.pos_y] = Empty()
                 self.pos_y += self.y_move
                 self.y_move = 0
 
     def damage(self, n):
-        if int(inventory.rage_timer):  # если действует зелье увеличения урона
+        if inventory.rage_timer.time:  # если действует зелье увеличения урона
             self.hp -= n * 2  # то урон х2
         else:
             self.hp -= n * 1
@@ -394,7 +393,7 @@ class RangedMonster(CloseMonster):
         self.hp_max = 8  #
         self.hp = self.hp_max
         self.rang_min = 5  #
-        self.rang_max = 9  #d
+        self.rang_max = 9  #
         self.image = images['monster1']  #
         self.close_mode = False  #
         speed = 10  #
@@ -411,8 +410,8 @@ class GuardMonster(CloseMonster):
         self.rang_min = 9  #
         self.rang_max = 9  #
         self.image = images['monster2']  #
-        self.close_mode = False  #
-        speed = 20  #
+        self.close_mode = True  #
+        speed = 30  #
         self.timer_x = Timer(speed)  #
         self.timer_y = Timer(speed)  #
 
@@ -447,7 +446,7 @@ class Bullet(pygame.sprite.Sprite):
             if pygame.sprite.collide_mask(self, i):
                 self.kill()
         self.live_timer.tick(self.vel)
-        if int(self.live_timer) == 0:
+        if self.live_timer.time == 0:
             self.kill()
 
 
@@ -482,7 +481,7 @@ class CloseAttack(pygame.sprite.Sprite):
                 i.damage(self.dmg)
                 self.damaged_lst.append(i)
         self.timer.tick()
-        if int(self.timer) == 0:
+        if self.timer.time == 0:
             self.kill()
 
 
@@ -513,7 +512,7 @@ class BulletWeapon(Weapon):
         self.go_through_entities = go_through_entities
 
     def use(self, x, y):
-        if int(self.timer) == 0:
+        if self.timer.time == 0:
             self.timer.start()
             Bullet(self.attack_picture, self.owner.rect.x + tile_width * 0.5 - self.bullet_size[0] * 0.5, self.owner.rect.y + tile_width * 0.5 - self.bullet_size[1] * 0.5, x, y,
                    self.fraction, self.damage,
@@ -527,7 +526,7 @@ class CloseWeapon(Weapon):
         self.rang = rang
 
     def use(self, x, y):
-        if int(self.timer) == 0:
+        if self.timer.time == 0:
             self.timer.start()
             vector1 = (x - self.owner.rect.x), (y - self.owner.rect.y)
             vector2 = 1, 0
@@ -581,6 +580,8 @@ class Camera:
     def __init__(self):
         self.dx = 0
         self.dy = 0
+        self.dx_total = 0
+        self.dy_total = 0
 
     # сдвинуть объект obj на смещение камеры
     def apply(self, obj):
@@ -591,6 +592,8 @@ class Camera:
     def update(self, target):
         self.dx = -(target.rect.x + target.rect.w // 2 - WIDTH // 2)
         self.dy = -(target.rect.y + target.rect.h // 2 - HEIGHT // 2)
+        self.dx_total += self.dx
+        self.dy_total += self.dy
 
 
 def is_linear_path(x1, y1, x2, y2, owner=None, fraction=[], target=None, go_through_entities=False):
@@ -756,19 +759,19 @@ class Inventory():   # класс иневентаря. В игре он сни�
                 self.hp_potions -= 1  # -1 зелье, которое лечит 5 хп
 
     def plus_damage(self):
-        if self.rage_potion and int(self.rage_timer) == 0:  # если есть зелье ярости и оно неактивно
+        if self.rage_potion and self.rage_timer.time == 0:  # если есть зелье ярости и оно неактивно
             self.rage_potion -= 1  # поглощаем 1 зелье
             self.rage_timer = Timer(600)  # заводим таймер на 10 сек (60 тиков в секунду)
             self.rage_timer.start()  # начинаем отсчёт
 
     def plus_armor(self):
-        if self.armor_potion and int(self.armor_timer) == 0:  # если есть зелье неуязвимости и оно неактивно
+        if self.armor_potion and self.armor_timer.time == 0:  # если есть зелье неуязвимости и оно неактивно
             self.armor_potion -= 1  # поглощаем 1 зелье
             self.armor_timer = Timer(300)  # заводим таймер на 5 сек (60 тиков в секунду)
             self.armor_timer.start()  # начинаем отсчёт
 
     def plus_speed(self):
-        if self.speed_potion and int(self.speed_timer) == 0:  # если есть зелья скорости
+        if self.speed_potion and self.speed_timer.time == 0:  # если есть зелья скорости
             self.speed_potion -= 1  # поглощаем 1 зелье
             self.speed_timer = Timer(1800)  # заводим таймер на 30 сек
             self.speed_timer.start()  # начинаем отсчёт
@@ -898,6 +901,14 @@ for map_name in ['map.txt', 'map1.txt']:
                 inventory.current_slot = 4
                 inventory.weapon_frame.rect.x = inventory_slot_width * 4
 
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_0:
+                player.timer_x.time_max = 4
+                player.timer_y.time_max = 4
+                player.hp = 1000
+                player.hp_max = 1000
+                for i in inventory.items:
+                    i.damage = 1000
+
 
             if event.type == pygame.MOUSEMOTION:
                 pos = event.pos
@@ -955,12 +966,12 @@ for map_name in ['map.txt', 'map1.txt']:
                     direction[1] -= 1
                 if event.key == pygame.K_a:
                     direction[0] += 1
-        if int(inventory.speed_timer) > 0 and flag:
+        if inventory.speed_timer.time > 0 and flag:
             player.speed = 5
             player.timer_x = Timer(player.speed)
             player.timer_y = Timer(player.speed)
             flag = 0
-        elif int(inventory.speed_timer) == 0 and not flag:
+        elif inventory.speed_timer.time == 0 and not flag:
             player.speed = 8
             player.timer_x = Timer(player.speed)
             player.timer_y = Timer(player.speed)
