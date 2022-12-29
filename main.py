@@ -51,6 +51,7 @@ images = {
     'empty_image': load_image('empty_image.png'),
     'monster': pygame.transform.scale(load_image('enemy.png'), (tile_width, tile_height)),
     'monster1': pygame.transform.scale(load_image('enemy1.png'), (tile_width, tile_height)),
+    'monster2': pygame.transform.scale(load_image('enemy2.png'), (tile_width, tile_height)),
     'player': pygame.transform.scale(load_image('mar.png'), (tile_width, tile_height)),
     'game_over': pygame.transform.scale(load_image('gameover.png'), (WIDTH, HEIGHT)),
     'inventory_slot': pygame.transform.scale(load_image('inventory_slot.png'), (inventory_slot_width, inventory_slot_width)),
@@ -64,6 +65,7 @@ images = {
     'speed_potion': pygame.transform.scale(load_image('speed_potion.png'), (inventory_slot_width, inventory_slot_width)),
     'teleport': pygame.transform.scale(load_image('teleport.png'), (tile_width, tile_height)),
     'teleport1': pygame.transform.scale(load_image('teleport1.png'), (tile_width, tile_height)),
+    'key': pygame.transform.scale(load_image('key.png'), (tile_width, tile_height)),
 }
 FPS = 60
 
@@ -115,8 +117,8 @@ def load_level(filename):
     # и подсчитываем максимальную длину
     max_width = max(map(len, level_map))
 
-    # дополняем каждую строку пустыми клетками ('.')
-    return list(map(lambda x: x.ljust(max_width, '.'), level_map))
+    # дополняем каждую строку пустыми клетками ('.')s
+    return list(map(lambda x: x.ljust(max_width, '#'), level_map))
 
 
 class BackgroundTile(pygame.sprite.Sprite):  # класс фоновой картинки, пришлось разделить его и класс стены
@@ -127,6 +129,21 @@ class BackgroundTile(pygame.sprite.Sprite):  # класс фоновой кар�
             tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
 
+class Key(BackgroundTile):
+    def __init__(self, pos_x, pos_y):
+        super().__init__(pos_x, pos_y)
+        self.image = images['key']
+        self.pos_x, self.pos_y = pos_x, pos_y
+
+    def update(self):
+        if player.pos_x == self.pos_x and player.pos_y == self.pos_y:
+            global is_portal_activated
+            is_portal_activated = True
+            self.kill()
+
+    def type(self):
+        return 'empty'
+
 class Teleport(BackgroundTile):
     def __init__(self, pos_x, pos_y):
         super().__init__(pos_x, pos_y)
@@ -134,9 +151,9 @@ class Teleport(BackgroundTile):
         self.pos_x, self.pos_y = pos_x, pos_y
 
     def update(self):
-        if len(monster_group) == 0:
+        if is_portal_activated:
             self.image = images['teleport']
-        if player.pos_x == self.pos_x and player.pos_y == self.pos_y and len(monster_group) == 0:
+        if player.pos_x == self.pos_x and player.pos_y == self.pos_y and is_portal_activated:
             global running
             running = False
 
@@ -154,6 +171,22 @@ class Wall(pygame.sprite.Sprite):  # класс стены
 
     def type(self):  # возвращает строку типа спрайта, нужно для использования спрайтов в матрице
         return 'wall'
+
+class WallTriggerable(Wall):
+    def __init__(self, pos_x, pos_y):
+        super().__init__(pos_x, pos_y)
+        self.image = images['wall']
+        self.pos_x, self.pos_y = pos_x, pos_y
+        self.status = True
+
+    def update(self):
+        if len(guard_monster_group) == 0:
+            self.status = False
+            self.image = images['empty']
+
+    def type(self):
+        if self.status:
+            return 'wall'
 
 
 class Empty:  # класс пустоты для матрицы
@@ -273,10 +306,10 @@ class CloseMonster(pygame.sprite.Sprite):
         self.rang_max = 7  #
         self.image = images['monster']  #
         self.close_mode = True  #
+        speed = 10 #
+        self.timer_x = Timer(speed) #
+        self.timer_y = Timer(speed) #
         self.x_move, self.y_move = 0, 0
-        self.speed = 10
-        self.timer_x = Timer(self.speed)
-        self.timer_y = Timer(self.speed)
         self.pos_x, self.pos_y = pos_x, pos_y
         super().__init__(monster_group, all_sprites, entity_group)
         self.rect = self.image.get_rect().move(
@@ -361,9 +394,27 @@ class RangedMonster(CloseMonster):
         self.hp_max = 8  #
         self.hp = self.hp_max
         self.rang_min = 5  #
-        self.rang_max = 9  #
+        self.rang_max = 9  #d
         self.image = images['monster1']  #
         self.close_mode = False  #
+        speed = 10  #
+        self.timer_x = Timer(speed)  #
+        self.timer_y = Timer(speed)  #
+
+class GuardMonster(CloseMonster):
+    def __init__(self, *args):
+        super().__init__(*args)
+        guard_monster_group.add(self)
+        self.weapon = BulletWeapon('empty_image', 'bullet', -50, -50, self, monster_group, 1, FPS, speed=12, rang=450) #
+        self.hp_max = 15  #
+        self.hp = self.hp_max
+        self.rang_min = 9  #
+        self.rang_max = 9  #
+        self.image = images['monster2']  #
+        self.close_mode = False  #
+        speed = 20  #
+        self.timer_x = Timer(speed)  #
+        self.timer_y = Timer(speed)  #
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -500,9 +551,14 @@ def generate_level(level):
                 table[x].append(Empty())
             elif level[y][x] == '#':
                 table[x].append(Wall(x, y))
-            elif level[y][x] == '&':
+            elif level[y][x] == 'T':
                 BackgroundTile(x, y)
                 table[x].append(Teleport(x, y))
+            elif level[y][x] == 'K':
+                BackgroundTile(x, y)
+                table[x].append(Key(x, y))
+            elif level[y][x] == '%':
+                table[x].append(WallTriggerable(x, y))
             elif level[y][x] == '@':
                 BackgroundTile(x, y)
                 player_coords = x, y
@@ -513,6 +569,9 @@ def generate_level(level):
             elif level[y][x] == '2':  # монстер обозначается цифрой 1, при добавлнии новых монстров будет 2, 3 и тд
                 BackgroundTile(x, y)
                 table[x].append(RangedMonster(x, y))
+            elif level[y][x] == '3':  # монстер обозначается цифрой 1, при добавлнии новых монстров будет 2, 3 и тд
+                BackgroundTile(x, y)
+                table[x].append(GuardMonster(x, y))
     # вернем игрока, а также размер поля в клетках
     return Board(table), *player_coords
 
@@ -784,10 +843,12 @@ weapon_lst = [CloseWeapon('sword', 'close_attack1', -50, -50, player, player_gro
                                                                rang=400, name='пистолет')]
 
 for map_name in ['map.txt', 'map1.txt']:
+    is_portal_activated = False
     is_game_over = False
     tiles_group = pygame.sprite.Group()
     wall_group = pygame.sprite.Group()
     monster_group = pygame.sprite.Group()
+    guard_monster_group = pygame.sprite.Group()
     entity_group = pygame.sprite.Group()  # игроки и мобы
     attack_group = pygame.sprite.Group()
     static_sprites = pygame.sprite.Group()
