@@ -8,7 +8,7 @@ clock = pygame.time.Clock()
 pygame.init()
 size = WIDTH, HEIGHT = 750, 750
 screen = pygame.display.set_mode(size)
-tile_width = tile_height = 50
+tile_width = tile_height = 40
 inventory_slot_width = 60
 
 
@@ -27,6 +27,9 @@ class Timer:
 
     def stop(self):
         self.time = 0
+
+    def __int__(self):
+        return self.time
 
 
 def load_image(name, colorkey=None):
@@ -63,6 +66,7 @@ images = {
     'teleport': pygame.transform.scale(load_image('teleport.png'), (tile_width, tile_height)),
     'teleport1': pygame.transform.scale(load_image('teleport1.png'), (tile_width, tile_height)),
     'key': pygame.transform.scale(load_image('key.png'), (tile_width, tile_height)),
+    'Jevel': pygame.transform.scale(load_image('Jewel.png'), (tile_width, tile_height)),
 }
 FPS = 60
 
@@ -126,6 +130,33 @@ class BackgroundTile(pygame.sprite.Sprite):  # класс фоновой кар�
             tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
 
+
+class Jewel(BackgroundTile):  # класс сокровищ
+    def __init__(self, pos_x, pos_y):
+        super().__init__(pos_x, pos_y)
+        self.image = images['Jevel']  # изображение сокровища
+        self.pos_x, self.pos_y = pos_x, pos_y  # координаты
+        self.rand_potion = ''
+
+    def update(self):
+        if player.pos_x == self.pos_x and player.pos_y == self.pos_y:  # проверяю координаты перса и сокровища
+            self.rand_potion = random.choice(['heal', 'rage', 'speed', 'armor'])  # рандомная зелька
+            # добавляем зельку в инвентарь
+            if self.rand_potion == 'heal':
+                inventory.hp_potions += 1
+            elif self.rand_potion == 'rage':
+                inventory.rage_potion += 1
+            elif self.rand_potion == 'speed':
+                inventory.speed_potion += 1
+            elif self.rand_potion == 'armor':
+                inventory.armor_potion += 1
+            # сокровище собрано, убираем его
+            self.kill()
+
+    def type(self):
+        return 'empty'
+
+
 class Key(BackgroundTile):
     def __init__(self, pos_x, pos_y):
         super().__init__(pos_x, pos_y)
@@ -140,6 +171,7 @@ class Key(BackgroundTile):
 
     def type(self):
         return 'empty'
+
 
 class Teleport(BackgroundTile):
     def __init__(self, pos_x, pos_y):
@@ -168,6 +200,7 @@ class Wall(pygame.sprite.Sprite):  # класс стены
 
     def type(self):  # возвращает строку типа спрайта, нужно для использования спрайтов в матрице
         return 'wall'
+
 
 class WallTriggerable(Wall):
     def __init__(self, pos_x, pos_y):
@@ -233,26 +266,26 @@ class Player(pygame.sprite.Sprite):
 
     def make_move(self, x_move, y_move):
         if self.diagonal:
-            if self.x_move == 0 and x_move != 0 and self.timer_y.time == 0 and board[self.pos_x + x_move][
+            if self.x_move == 0 and x_move != 0 and int(self.timer_y) == 0 and board[self.pos_x + x_move][
                 self.pos_y].type() not in ['wall', 'monster', 'blocked']:
                 board[self.pos_x + x_move][self.pos_y] = Blocked()
                 self.x_move = x_move
                 self.timer_x.start()
                 self.diagonal = not self.diagonal
-            if self.y_move == 0 and y_move != 0 and self.timer_x.time == 0 and board[self.pos_x][
+            if self.y_move == 0 and y_move != 0 and int(self.timer_x) == 0 and board[self.pos_x][
                 self.pos_y + y_move].type() not in ['wall', 'monster', 'blocked']:
                 board[self.pos_x][self.pos_y + y_move] = Blocked()
                 self.y_move = y_move
                 self.timer_y.start()
                 self.diagonal = not self.diagonal
         else:
-            if self.y_move == 0 and y_move != 0 and self.timer_x.time == 0 and board[self.pos_x][
+            if self.y_move == 0 and y_move != 0 and int(self.timer_x) == 0 and board[self.pos_x][
                 self.pos_y + y_move].type() not in ['wall', 'monster', 'blocked']:
                 board[self.pos_x][self.pos_y + y_move] = Blocked()
                 self.y_move = y_move
                 self.timer_y.start()
                 self.diagonal = not self.diagonal
-            if self.x_move == 0 and x_move != 0 and self.timer_y.time == 0 and board[self.pos_x + x_move][
+            if self.x_move == 0 and x_move != 0 and int(self.timer_y) == 0 and board[self.pos_x + x_move][
                 self.pos_y].type() not in ['wall', 'monster', 'blocked']:
                 board[self.pos_x + x_move][self.pos_y] = Blocked()
                 self.x_move = x_move
@@ -262,32 +295,33 @@ class Player(pygame.sprite.Sprite):
     def update(self):
         if self.x_move != 0:
             self.timer_x.tick()
+            x_old = self.x
             self.x += self.x_move * (tile_width / self.timer_x.time_max)
-            self.rect.x = self.x + camera.dx_total
-            if self.timer_x.time == 0:
+            self.rect.x -= x_old - self.x
+            if int(self.timer_x) == 0:
                 board[self.pos_x][self.pos_y] = Empty()
                 self.pos_x += self.x_move
                 board[self.pos_x][self.pos_y] = player
                 self.x_move = 0
         if self.y_move != 0:
             self.timer_y.tick()
+            y_old = self.y
             self.y += self.y_move * (tile_width / self.timer_y.time_max)
-            self.rect.y = self.y + camera.dy_total
-            if self.timer_y.time == 0:
+            self.rect.y -= y_old - self.y
+            if int(self.timer_y) == 0:
                 board[self.pos_x][self.pos_y] = Empty()
                 self.pos_y += self.y_move
                 board[self.pos_x][self.pos_y] = player
                 self.y_move = 0
 
     def damage(self, n):
-        if inventory.armor_timer.time:
+        if int(inventory.armor_timer):
             self.hp -= n * 0
         else:
             self.hp -= n * 1
         if self.hp <= 0:
             Gameover()
             self.kill()
-
 
 
 class CloseMonster(pygame.sprite.Sprite):
@@ -311,7 +345,6 @@ class CloseMonster(pygame.sprite.Sprite):
             tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
         self.next_cell = 0, 0
-        self.x, self.y = self.rect.topleft
 
     def type(self):
         return 'monster'
@@ -324,7 +357,7 @@ class CloseMonster(pygame.sprite.Sprite):
             if abs(self.pos_x - player.pos_x) <= self.rang_min and abs(self.pos_y - player.pos_y) <= self.rang_min:
                 self.weapon.use(player.rect.x, player.rect.y)
 
-        if self.timer_x.time == 0 and self.timer_y.time == 0:
+        if int(self.timer_x) == 0 and int(self.timer_y) == 0:
             path = board.get_path(self.pos_x, self.pos_y, player.pos_x, player.pos_y)
             next_cell = path[1]
             if board[next_cell[0]][next_cell[1]].type() == 'empty' and abs(
@@ -358,26 +391,23 @@ class CloseMonster(pygame.sprite.Sprite):
 
         if self.x_move != 0:
             self.timer_x.tick()
-            x_old = self.x
-            self.x += self.x_move * (tile_width / self.timer_x.time_max)
-            self.rect.x = self.x + camera.dx_total
-            if self.timer_x.time == 0:
+            self.rect.x += self.x_move * (tile_width / self.timer_x.time_max)
+            if int(self.timer_x) == 0:
                 board[self.next_cell[0]][self.next_cell[1]] = self
                 board[self.pos_x][self.pos_y] = Empty()
                 self.pos_x += self.x_move
                 self.x_move = 0
         if self.y_move != 0:
             self.timer_y.tick()
-            self.y += self.y_move * (tile_width / self.timer_y.time_max)
-            self.rect.y = self.y + camera.dy_total
-            if self.timer_y.time == 0:
+            self.rect.y += self.y_move * (tile_width / self.timer_y.time_max)
+            if int(self.timer_y) == 0:
                 board[self.next_cell[0]][self.next_cell[1]] = self
                 board[self.pos_x][self.pos_y] = Empty()
                 self.pos_y += self.y_move
                 self.y_move = 0
 
     def damage(self, n):
-        if inventory.rage_timer.time:  # если действует зелье увеличения урона
+        if int(inventory.rage_timer):  # если действует зелье увеличения урона
             self.hp -= n * 2  # то урон х2
         else:
             self.hp -= n * 1
@@ -386,6 +416,7 @@ class CloseMonster(pygame.sprite.Sprite):
             board[self.pos_x][self.pos_y] = Empty()
             self.kill()
 
+
 class RangedMonster(CloseMonster):
     def __init__(self, *args):
         super().__init__(*args)
@@ -393,12 +424,13 @@ class RangedMonster(CloseMonster):
         self.hp_max = 8  #
         self.hp = self.hp_max
         self.rang_min = 5  #
-        self.rang_max = 9  #
+        self.rang_max = 9  #d
         self.image = images['monster1']  #
         self.close_mode = False  #
         speed = 10  #
         self.timer_x = Timer(speed)  #
         self.timer_y = Timer(speed)  #
+
 
 class GuardMonster(CloseMonster):
     def __init__(self, *args):
@@ -410,8 +442,8 @@ class GuardMonster(CloseMonster):
         self.rang_min = 9  #
         self.rang_max = 9  #
         self.image = images['monster2']  #
-        self.close_mode = True  #
-        speed = 30  #
+        self.close_mode = False  #
+        speed = 20  #
         self.timer_x = Timer(speed)  #
         self.timer_y = Timer(speed)  #
 
@@ -432,6 +464,7 @@ class Bullet(pygame.sprite.Sprite):
         self.vector = ((x2 - x1) / a, (y2 - y1) / a)
         self.live_timer = Timer(rang)
         self.live_timer.start()
+
     def update(self):
         old_x, old_y = self.x1, self.y1
         self.x1, self.y1 = self.x1 + self.vector[0] * self.vel, self.y1 + self.vector[1] * self.vel
@@ -446,7 +479,7 @@ class Bullet(pygame.sprite.Sprite):
             if pygame.sprite.collide_mask(self, i):
                 self.kill()
         self.live_timer.tick(self.vel)
-        if self.live_timer.time == 0:
+        if int(self.live_timer) == 0:
             self.kill()
 
 
@@ -481,7 +514,7 @@ class CloseAttack(pygame.sprite.Sprite):
                 i.damage(self.dmg)
                 self.damaged_lst.append(i)
         self.timer.tick()
-        if self.timer.time == 0:
+        if int(self.timer) == 0:
             self.kill()
 
 
@@ -512,7 +545,7 @@ class BulletWeapon(Weapon):
         self.go_through_entities = go_through_entities
 
     def use(self, x, y):
-        if self.timer.time == 0:
+        if int(self.timer) == 0:
             self.timer.start()
             Bullet(self.attack_picture, self.owner.rect.x + tile_width * 0.5 - self.bullet_size[0] * 0.5, self.owner.rect.y + tile_width * 0.5 - self.bullet_size[1] * 0.5, x, y,
                    self.fraction, self.damage,
@@ -526,7 +559,7 @@ class CloseWeapon(Weapon):
         self.rang = rang
 
     def use(self, x, y):
-        if self.timer.time == 0:
+        if int(self.timer) == 0:
             self.timer.start()
             vector1 = (x - self.owner.rect.x), (y - self.owner.rect.y)
             vector2 = 1, 0
@@ -545,8 +578,7 @@ def generate_level(level):
     for y in range(len(level)):
         for x in range(len(level[y])):
             if level[y][x] == '.':
-                BackgroundTile(x,
-                               y)  # фоновые спрайты не добавляются в матрицу, потому что они наслаивались бы друг на друга и засоряли экран
+                BackgroundTile(x, y)  # фоновые спрайты не добавляются в матрицу, потому что они наслаивались бы друг на друга и засоряли экран
                 table[x].append(Empty())
             elif level[y][x] == '#':
                 table[x].append(Wall(x, y))
@@ -556,6 +588,9 @@ def generate_level(level):
             elif level[y][x] == 'K':
                 BackgroundTile(x, y)
                 table[x].append(Key(x, y))
+            elif level[y][x] == 'J':  # сокровище
+                BackgroundTile(x, y)
+                table[x].append(Jewel(x, y))
             elif level[y][x] == '%':
                 table[x].append(WallTriggerable(x, y))
             elif level[y][x] == '@':
@@ -572,7 +607,7 @@ def generate_level(level):
                 BackgroundTile(x, y)
                 table[x].append(GuardMonster(x, y))
     # вернем игрока, а также размер поля в клетках
-    return Board(table), *player_coords
+    return Board(table), player_coords[0], player_coords[1]
 
 
 class Camera:
@@ -580,8 +615,6 @@ class Camera:
     def __init__(self):
         self.dx = 0
         self.dy = 0
-        self.dx_total = 0
-        self.dy_total = 0
 
     # сдвинуть объект obj на смещение камеры
     def apply(self, obj):
@@ -592,8 +625,6 @@ class Camera:
     def update(self, target):
         self.dx = -(target.rect.x + target.rect.w // 2 - WIDTH // 2)
         self.dy = -(target.rect.y + target.rect.h // 2 - HEIGHT // 2)
-        self.dx_total += self.dx
-        self.dy_total += self.dy
 
 
 def is_linear_path(x1, y1, x2, y2, owner=None, fraction=[], target=None, go_through_entities=False):
@@ -687,6 +718,7 @@ class Board:  # класс матрицы доски
             n -= 1
         return lst[::-1]
 
+
 class StaticSprite(pygame.sprite.Sprite):
     def __init__(self, x, y, img_name):
         super().__init__(all_sprites, inventar_group, static_sprites)
@@ -695,8 +727,8 @@ class StaticSprite(pygame.sprite.Sprite):
             x, y)
         self.mask = pygame.mask.from_surface(self.image)
 
-class Inventory():   # класс иневентаря. В игре он снизу слева
 
+class Inventory:   # класс иневентаря. В игре он снизу слева
     def __init__(self):
         self.items = [CloseWeapon('sword', 'close_attack1', -50, -50, player, player_group, 2, FPS // 2,
                                          rang=4.25, name='меч'), BulletWeapon('gun', 'bullet', -50, -50,
@@ -759,19 +791,19 @@ class Inventory():   # класс иневентаря. В игре он сни�
                 self.hp_potions -= 1  # -1 зелье, которое лечит 5 хп
 
     def plus_damage(self):
-        if self.rage_potion and self.rage_timer.time == 0:  # если есть зелье ярости и оно неактивно
+        if self.rage_potion and int(self.rage_timer) == 0:  # если есть зелье ярости и оно неактивно
             self.rage_potion -= 1  # поглощаем 1 зелье
             self.rage_timer = Timer(600)  # заводим таймер на 10 сек (60 тиков в секунду)
             self.rage_timer.start()  # начинаем отсчёт
 
     def plus_armor(self):
-        if self.armor_potion and self.armor_timer.time == 0:  # если есть зелье неуязвимости и оно неактивно
+        if self.armor_potion and int(self.armor_timer) == 0:  # если есть зелье неуязвимости и оно неактивно
             self.armor_potion -= 1  # поглощаем 1 зелье
             self.armor_timer = Timer(300)  # заводим таймер на 5 сек (60 тиков в секунду)
             self.armor_timer.start()  # начинаем отсчёт
 
     def plus_speed(self):
-        if self.speed_potion and self.speed_timer.time == 0:  # если есть зелья скорости
+        if self.speed_potion and int(self.speed_timer) == 0:  # если есть зелья скорости
             self.speed_potion -= 1  # поглощаем 1 зелье
             self.speed_timer = Timer(1800)  # заводим таймер на 30 сек
             self.speed_timer.start()  # начинаем отсчёт
@@ -801,6 +833,7 @@ class Inventory():   # класс иневентаря. В игре он сни�
         inventory.rage_timer.tick()  # если зелье активно, то уменьшаем время действия до 0. Иначе 0
         inventory.armor_timer.tick()  # если зелье активно, то уменьшаем время действия до 0. Иначе 0
         inventory.speed_timer.tick()
+
 
 class Gameover(pygame.sprite.Sprite):
     def __init__(self):
@@ -871,9 +904,6 @@ for map_name in ['map.txt', 'map1.txt']:
     inventory = Inventory()
     font_for_inventory = pygame.font.Font(None, 20)
     while running:
-        # изменяем ракурс камеры
-        # внутри игрового цикла ещё один цикл
-        # приёма и обработки сообщений
         for event in pygame.event.get():
             # при закрытии окна
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -900,14 +930,6 @@ for map_name in ['map.txt', 'map1.txt']:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_5:
                 inventory.current_slot = 4
                 inventory.weapon_frame.rect.x = inventory_slot_width * 4
-
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_0:
-                player.timer_x.time_max = 4
-                player.timer_y.time_max = 4
-                player.hp = 1000
-                player.hp_max = 1000
-                for i in inventory.items:
-                    i.damage = 1000
 
 
             if event.type == pygame.MOUSEMOTION:
@@ -966,12 +988,12 @@ for map_name in ['map.txt', 'map1.txt']:
                     direction[1] -= 1
                 if event.key == pygame.K_a:
                     direction[0] += 1
-        if inventory.speed_timer.time > 0 and flag:
+        if int(inventory.speed_timer) > 0 and flag:
             player.speed = 5
             player.timer_x = Timer(player.speed)
             player.timer_y = Timer(player.speed)
             flag = 0
-        elif inventory.speed_timer.time == 0 and not flag:
+        elif int(inventory.speed_timer) == 0 and not flag:
             player.speed = 8
             player.timer_x = Timer(player.speed)
             player.timer_y = Timer(player.speed)
