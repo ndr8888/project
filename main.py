@@ -353,6 +353,7 @@ class Monster(pygame.sprite.Sprite):
         self.next_cell = 0, 0
         self.x, self.y = self.rect.topleft
         self.state = False
+        self.player_coords_old = player.pos_x, player.pos_y
 
     def type(self):
         return 'monster'
@@ -370,8 +371,10 @@ class Monster(pygame.sprite.Sprite):
                 self.pos_y - player.pos_y) <= self.rang_max:
             path = board.get_path(self.pos_x, self.pos_y, player.pos_x, player.pos_y)
             next_cell = path[1]
-            self.state = is_linear_path(*self.rect.center, *player.rect.center, owner=self, target=player,
-                                        fraction=monster_group)
+            if self.player_coords_old != (player.pos_x, player.pos_y):
+                self.state = is_linear_path(*self.rect.center, *player.rect.center, owner=self, target=player,
+                                            fraction=monster_group)
+                self.player_coords_old = player.pos_x, player.pos_y
             if abs(
                     self.pos_x - player.pos_x) <= self.rang_max and abs(
                 self.pos_y - player.pos_y) <= self.rang_max:
