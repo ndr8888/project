@@ -51,15 +51,20 @@ images = {
     'monster2': pygame.transform.scale(load_image('enemy2.png'), (tile_width, tile_height)),
     'player': pygame.transform.scale(load_image('mar.png'), (tile_width, tile_height)),
     'game_over': pygame.transform.scale(load_image('gameover.png'), (WIDTH, HEIGHT)),
-    'inventory_slot': pygame.transform.scale(load_image('inventory_slot.png'), (inventory_slot_width, inventory_slot_width)),
-    'inventory_slot2': pygame.transform.scale(load_image('inventory_slot2.png'), (inventory_slot_width, inventory_slot_width)),
+    'inventory_slot': pygame.transform.scale(load_image('inventory_slot.png'),
+                                             (inventory_slot_width, inventory_slot_width)),
+    'inventory_slot2': pygame.transform.scale(load_image('inventory_slot2.png'),
+                                              (inventory_slot_width, inventory_slot_width)),
     'sword': load_image('sword.png'),
     'gun': load_image('gun.png'),
     'frame': pygame.transform.scale(load_image('frame.png'), (inventory_slot_width, inventory_slot_width)),
-    'health_potion': pygame.transform.scale(load_image('health_potion.png'), (inventory_slot_width, inventory_slot_width)),
-    'shield_potion': pygame.transform.scale(load_image('shield_potion.png'), (inventory_slot_width, inventory_slot_width)),
+    'health_potion': pygame.transform.scale(load_image('health_potion.png'),
+                                            (inventory_slot_width, inventory_slot_width)),
+    'shield_potion': pygame.transform.scale(load_image('shield_potion.png'),
+                                            (inventory_slot_width, inventory_slot_width)),
     'rage_potion': pygame.transform.scale(load_image('rage_potion.png'), (inventory_slot_width, inventory_slot_width)),
-    'speed_potion': pygame.transform.scale(load_image('speed_potion.png'), (inventory_slot_width, inventory_slot_width)),
+    'speed_potion': pygame.transform.scale(load_image('speed_potion.png'),
+                                           (inventory_slot_width, inventory_slot_width)),
     'teleport': pygame.transform.scale(load_image('teleport.png'), (tile_width, tile_height)),
     'teleport1': pygame.transform.scale(load_image('teleport1.png'), (tile_width, tile_height)),
     'key': pygame.transform.scale(load_image('key.png'), (tile_width, tile_height)),
@@ -129,6 +134,7 @@ class BackgroundTile(pygame.sprite.Sprite):  # класс фоновой кар�
             tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
 
+
 class Key(BackgroundTile):
     def __init__(self, pos_x, pos_y):
         super().__init__(pos_x, pos_y)
@@ -143,6 +149,7 @@ class Key(BackgroundTile):
 
     def type(self):
         return 'empty'
+
 
 class Teleport(BackgroundTile):
     def __init__(self, pos_x, pos_y):
@@ -172,6 +179,7 @@ class Wall(pygame.sprite.Sprite):  # класс стены
     def type(self):  # возвращает строку типа спрайта, нужно для использования спрайтов в матрице
         return 'wall'
 
+
 class WallTriggerable(Wall):
     def __init__(self, pos_x, pos_y):
         super().__init__(pos_x, pos_y)
@@ -188,6 +196,7 @@ class WallTriggerable(Wall):
         if self.status:
             return 'wall'
 
+
 class Jewel(BackgroundTile):  # класс сокровищ
     def __init__(self, pos_x, pos_y):
         super().__init__(pos_x, pos_y)
@@ -198,7 +207,7 @@ class Jewel(BackgroundTile):  # класс сокровищ
     def update(self):
         if player.pos_x == self.pos_x and player.pos_y == self.pos_y:  # проверяю координаты перса и сокровища
             weapon_lst.append(MagicWeapon('staff', 'blast', -50, -50, player, player_group, 1, FPS,
-                        area_width=1, name='меч'))
+                                          area_width=1, name='меч'))
             self.rand_potion = random.choice(['heal', 'rage', 'speed', 'armor'])  # рандомная зелька
             # добавляем зельку в инвентарь
             if self.rand_potion == 'heal':
@@ -346,6 +355,7 @@ class Monster(pygame.sprite.Sprite):
         self.x, self.y = self.rect.topleft
         self.state = False
         self.player_coords_old = player.pos_x, player.pos_y
+        self.coords_old = self.pos_x, self.pos_y
 
     def type(self):
         return 'monster'
@@ -359,25 +369,29 @@ class Monster(pygame.sprite.Sprite):
                 self.weapon.use(player.rect.x, player.rect.y)
 
         if self.timer_x.time == 0 and self.timer_y.time == 0 and abs(
-                    self.pos_x - player.pos_x) <= self.rang_max and abs(
-                self.pos_y - player.pos_y) <= self.rang_max:
+                self.pos_x - player.pos_x) <= self.rang_max and abs(
+            self.pos_y - player.pos_y) <= self.rang_max:
             path = board.get_path(self.pos_x, self.pos_y, player.pos_x, player.pos_y)
             next_cell = path[1]
-            if self.player_coords_old != (player.pos_x, player.pos_y):
-                self.state = is_linear_path(*self.rect.center, *player.rect.center, owner=self, target=player,
-                                            fraction=monster_group)
+            state_new = self.state
+            if self.player_coords_old != (player.pos_x, player.pos_y) or self.coords_old != (self.pos_x, self.pos_y):
+                state_new = is_linear_path(*self.rect.center, *player.rect.center, owner=self, target=player,
+                                           fraction=monster_group)
                 self.player_coords_old = player.pos_x, player.pos_y
+                self.coords_old = self.pos_x, self.pos_y
+
             if abs(
                     self.pos_x - player.pos_x) <= self.rang_max and abs(
                 self.pos_y - player.pos_y) <= self.rang_max:
                 if ((self.rang_min <= abs(self.pos_x - player.pos_x) or self.rang_min <= abs(
-                        self.pos_y - player.pos_y)) or not self.state) and board[next_cell[0]][next_cell[1]].type() == 'empty':
+                        self.pos_y - player.pos_y)) or not state_new) and board[next_cell[0]][
+                    next_cell[1]].type() == 'empty':
                     self.next_cell = next_cell
                     x_move, y_move = self.next_cell[0] - self.pos_x, self.next_cell[1] - self.pos_y
                 elif board[self.pos_x - (next_cell[0] - self.pos_x)][
                     self.pos_y - (next_cell[1] - self.pos_y)].type() == 'empty' and not (abs(
                     self.pos_x - player.pos_x) == self.rang_min - 1 or abs(
-                    self.pos_y - player.pos_y) == self.rang_min - 1) and not self.state:
+                    self.pos_y - player.pos_y) == self.rang_min - 1) and self.state:
                     self.next_cell = [self.pos_x - (next_cell[0] - self.pos_x),
                                       self.pos_y - (next_cell[1] - self.pos_y)]
                     x_move, y_move = -(next_cell[0] - self.pos_x), -(next_cell[1] - self.pos_y)
@@ -395,6 +409,7 @@ class Monster(pygame.sprite.Sprite):
                     self.y_move = y_move
                     self.timer_y.start()
                     board[self.pos_x][self.pos_y + y_move] = Blocked()
+            self.state = state_new
 
         if self.x_move != 0:
             self.timer_x.tick()
@@ -443,6 +458,7 @@ class Bullet(pygame.sprite.Sprite):
         self.vector = ((x2 - x1) / a, (y2 - y1) / a)
         self.live_timer = Timer(rang)
         self.live_timer.start()
+
     def update(self):
         old_x, old_y = self.x1, self.y1
         self.x1, self.y1 = self.x1 + self.vector[0] * self.vel, self.y1 + self.vector[1] * self.vel
@@ -495,6 +511,7 @@ class CloseAttack(pygame.sprite.Sprite):
         if self.timer.time == 0:
             self.kill()
 
+
 class MagicAttack(pygame.sprite.Sprite):
     def __init__(self, picture, x, y, rang, fraction, damage):
         super().__init__(all_sprites, attack_group)
@@ -514,13 +531,13 @@ class MagicAttack(pygame.sprite.Sprite):
         for i in entity_group:  # проверка на столкновение с монстрами
             if pygame.sprite.collide_mask(self, i) and i not in self.fraction and i not in self.damaged_lst and (
                     is_linear_path(*self.rect.center, *i.rect.topleft, target=i,
-                                    fraction=self.fraction) or is_linear_path(*self.rect.center,
-                                                                                *i.rect.topright,
-                                                                                target=i,
-                                                                                fraction=self.fraction) or is_linear_path(
+                                   fraction=self.fraction) or is_linear_path(*self.rect.center,
+                                                                             *i.rect.topright,
+                                                                             target=i,
+                                                                             fraction=self.fraction) or is_linear_path(
                 *self.rect.center, *i.rect.bottomleft, target=i,
                 fraction=self.fraction) or is_linear_path(*self.rect.center, *i.rect.bottomright,
-                                                            target=i, fraction=self.fraction)):
+                                                          target=i, fraction=self.fraction)):
                 i.damage(self.dmg)
                 self.damaged_lst.append(i)
         self.timer.tick()
@@ -626,15 +643,20 @@ def generate_level(level):
                 table[x].append(Jewel(x, y))
             elif level[y][x] == '1':  # монстер обозначается цифрой 1, при добавлнии новых монстров будет 2, 3 и тд
                 BackgroundTile(x, y)
-                table[x].append(Monster(x, y, CloseWeapon('empty_image', 'close_attack', -50, -50, None, monster_group, 1, FPS // 2,
-                                  rang=2.25), 10, 2, 7, 'monster', True, 10))
+                table[x].append(
+                    Monster(x, y, CloseWeapon('empty_image', 'close_attack', -50, -50, None, monster_group, 1, FPS // 2,
+                                              rang=2.25), 10, 2, 7, 'monster', True, 10))
             elif level[y][x] == '2':  # монстер обозначается цифрой 1, при добавлнии новых монстров будет 2, 3 и тд
                 BackgroundTile(x, y)
-                table[x].append(Monster(x, y, BulletWeapon('empty_image', 'bullet', -50, -50, None, monster_group, 1, FPS, speed=8, rang=400), 8, 5, 9, 'monster1', False, 10))
+                table[x].append(Monster(x, y,
+                                        BulletWeapon('empty_image', 'bullet', -50, -50, None, monster_group, 1, FPS,
+                                                     speed=8, rang=400), 8, 5, 9, 'monster1', False, 10))
             elif level[y][x] == '3':  # монстер обозначается цифрой 1, при добавлнии новых монстров будет 2, 3 и тд
                 BackgroundTile(x, y)
-                table[x].append(Monster(x, y, BulletWeapon('empty_image', 'bullet', -50, -50, None, monster_group, 1, FPS, speed=15,
-                                   rang=450), 15, 9, 9, 'monster2', False, 30, dop_groups=[guard_monster_group]))
+                table[x].append(
+                    Monster(x, y, BulletWeapon('empty_image', 'bullet', -50, -50, None, monster_group, 1, FPS, speed=15,
+                                               rang=450), 15, 9, 9, 'monster2', False, 30,
+                            dop_groups=[guard_monster_group]))
     # вернем игрока, а также размер поля в клетках
     return Board(table), *player_coords
 
@@ -751,6 +773,7 @@ class Board:  # класс матрицы доски
             n -= 1
         return lst[::-1]
 
+
 class StaticSprite(pygame.sprite.Sprite):
     def __init__(self, x, y, img_name):
         super().__init__(all_sprites, inventar_group, static_sprites)
@@ -841,27 +864,28 @@ class Inventory:  # класс иневентаря. В игре он снизу
         screen.blit(text, (inventory_slot_width * 7 + 5, HEIGHT - 10))  # выводим кол-во зелий ярости около зелья ярости
         text = font_for_inventory.render(f"{inventory.armor_potion}", True, (255, 0, 0))  # кол-во зелий неуязвимости
         screen.blit(text, (
-        inventory_slot_width * 8 + 5, HEIGHT - 10))  # выводим кол-во зелий неуязвимости около зелья неуязвимости
+            inventory_slot_width * 8 + 5, HEIGHT - 10))  # выводим кол-во зелий неуязвимости около зелья неуязвимости
         text = font_for_inventory.render(f"{inventory.speed_potion}", True, (255, 0, 0))  # кол-во зелий скорости
         screen.blit(text,
                     (inventory_slot_width * 9 + 5, HEIGHT - 10))  # выводим кол-во зелий скорости около зелья скорости
 
         text = font_for_inventory.render(f"{6}", True, (0, 255, 0))  # зелье хп активируется при нажатии на 1
         screen.blit(text, (
-        inventory_slot_width * 6 + 5, HEIGHT - inventory_slot_width - 10))  # выводим зеленым шрифтом цифру 1
+            inventory_slot_width * 6 + 5, HEIGHT - inventory_slot_width - 10))  # выводим зеленым шрифтом цифру 1
         text = font_for_inventory.render(f"{7}", True, (0, 255, 0))  # зелье ярости активируется при нажатии на 2
         screen.blit(text, (
-        inventory_slot_width * 7 + 5, HEIGHT - inventory_slot_width - 10))  # выводим зеленым шрифтом цифру 2
+            inventory_slot_width * 7 + 5, HEIGHT - inventory_slot_width - 10))  # выводим зеленым шрифтом цифру 2
         text = font_for_inventory.render(f"{8}", True, (0, 255, 0))  # зелье неуязвимости активируется при нажатии на 3
         screen.blit(text, (
-        inventory_slot_width * 8 + 5, HEIGHT - inventory_slot_width - 10))  # выводим зеленым шрифтом цифру 3
+            inventory_slot_width * 8 + 5, HEIGHT - inventory_slot_width - 10))  # выводим зеленым шрифтом цифру 3
         text = font_for_inventory.render(f"{9}", True, (0, 255, 0))  # зелье скорости активируется при нажатии на 4
         screen.blit(text, (
-        inventory_slot_width * 9 + 5, HEIGHT - inventory_slot_width - 10))  # выводим зеленым шрифтом цифру 4
+            inventory_slot_width * 9 + 5, HEIGHT - inventory_slot_width - 10))  # выводим зеленым шрифтом цифру 4
 
         inventory.rage_timer.tick()  # если зелье активно, то уменьшаем время действия до 0. Иначе 0
         inventory.armor_timer.tick()  # если зелье активно, то уменьшаем время действия до 0. Иначе 0
         inventory.speed_timer.tick()
+
 
 class Gameover(pygame.sprite.Sprite):
     def __init__(self):
@@ -971,7 +995,6 @@ for map_name in ['map.txt', 'map1.txt']:
                 for i in weapon_lst:
                     i.damage = 1000
 
-
             if event.type == pygame.MOUSEMOTION:
                 pos = event.pos
 
@@ -981,9 +1004,9 @@ for map_name in ['map.txt', 'map1.txt']:
                 inventory.hp_plus()
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 4:  # колесико мыши вверх дает +1 зелье урона
-                if inventory.current_slot != len(inventory.items) - 1:
-                    inventory.current_slot += 1
-                    inventory.weapon_frame.rect.x += inventory_slot_width
+                if inventory.current_slot != 0:
+                    inventory.current_slot -= 1
+                    inventory.weapon_frame.rect.x -= inventory_slot_width
                 else:
                     inventory.current_slot = len(weapon_lst) - 1
                     inventory.weapon_frame.rect.x = inventory_slot_width * (len(weapon_lst) - 1)
