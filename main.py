@@ -71,6 +71,7 @@ images = {
     'Jevel': pygame.transform.scale(load_image('Jewel.png'), (tile_width, tile_height)),
     'blast': load_image('blast.png'),
     'staff': load_image('staff.png'),
+    'cross': load_image('cross.png'),
 }
 FPS = 60
 
@@ -593,6 +594,9 @@ class MagicWeapon(Weapon):
             if abs(x - self.owner.rect.x) <= self.rang and abs(y - self.owner.rect.y) <= self.rang:
                 MagicAttack(self.attack_picture, x, y,
                             self.area_width, self.fraction, self.damage)
+            else:
+                MagicAttack('cross', x, y,
+                            self.area_width, self.fraction, 0)
 
 
 class CloseWeapon(Weapon):
