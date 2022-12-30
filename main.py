@@ -1,16 +1,43 @@
 import pygame
+import os
+import sys
 import random
 import math
-from Timer import Timer
-from function import load_image, terminate, load_level
-from Empty import Empty
-from Blocked import Blocked
-from Camera import Camera
-from CONSTANTS import *
 
 clock = pygame.time.Clock()
 pygame.init()
+size = WIDTH, HEIGHT = 750, 750
 screen = pygame.display.set_mode(size)
+tile_width = tile_height = 50
+inventory_slot_width = 60
+
+
+class Timer:
+    def __init__(self, time_max):
+        self.time_max = time_max
+        self.time = 0
+
+    def start(self):
+        self.time = self.time_max
+
+    def tick(self, time=1):
+        self.time -= time
+        if self.time < 0:
+            self.time = 0
+
+    def stop(self):
+        self.time = 0
+
+
+def load_image(name, colorkey=None):
+    fullname = os.path.join('data', name)
+    # если файл не существует, то выходим
+    if not os.path.isfile(fullname):
+        print(f"Файл с изображением '{fullname}' не найден")
+        sys.exit()
+    image = pygame.image.load(fullname)
+    return image
+
 
 images = {
     'wall': pygame.transform.scale(load_image('box.png'), (tile_width, tile_height)),
@@ -30,21 +57,27 @@ images = {
                                               (inventory_slot_width, inventory_slot_width)),
     'sword': load_image('sword.png'),
     'gun': load_image('gun.png'),
-    'frame': pygame.transform.scale(load_image('frame.png'),
-                                    (inventory_slot_width, inventory_slot_width)),
+    'frame': pygame.transform.scale(load_image('frame.png'), (inventory_slot_width, inventory_slot_width)),
     'health_potion': pygame.transform.scale(load_image('health_potion.png'),
                                             (inventory_slot_width, inventory_slot_width)),
     'shield_potion': pygame.transform.scale(load_image('shield_potion.png'),
                                             (inventory_slot_width, inventory_slot_width)),
-    'rage_potion': pygame.transform.scale(load_image('rage_potion.png'),
-                                          (inventory_slot_width, inventory_slot_width)),
+    'rage_potion': pygame.transform.scale(load_image('rage_potion.png'), (inventory_slot_width, inventory_slot_width)),
     'speed_potion': pygame.transform.scale(load_image('speed_potion.png'),
                                            (inventory_slot_width, inventory_slot_width)),
     'teleport': pygame.transform.scale(load_image('teleport.png'), (tile_width, tile_height)),
     'teleport1': pygame.transform.scale(load_image('teleport1.png'), (tile_width, tile_height)),
-    'key': pygame.transform.scale(load_image('key.png'), (tile_width, tile_height)),
+    'key': pygame.transform.scale(load_image('teleport.png'), (tile_width, tile_height)),
     'Jevel': pygame.transform.scale(load_image('Jewel.png'), (tile_width, tile_height)),
+    'blast': load_image('blast.png'),
+    'staff': load_image('staff.png'),
 }
+FPS = 60
+
+
+def terminate():
+    pygame.quit()
+    sys.exit()
 
 
 def start_screen():
@@ -80,11 +113,22 @@ def start_screen():
 start_screen()
 
 
-# класс фоновой картинки, пришлось разделить его и класс стены
-class BackgroundTile(
-    pygame.sprite.Sprite):  # класс фоновой картинки, пришлось разделить его и класс стены
+def load_level(filename):
+    filename = "data/" + filename
+    # читаем уровень, убирая символы перевода строки
+    with open(filename, 'r') as mapFile:
+        level_map = [line.strip() for line in mapFile]
+
+    # и подсчитываем максимальную длину
+    max_width = max(map(len, level_map))
+
+    # дополняем каждую строку пустыми клетками ('.')s
+    return list(map(lambda x: x.ljust(max_width, '#'), level_map))
+
+
+class BackgroundTile(pygame.sprite.Sprite):  # класс фоновой картинки, пришлось разделить его и класс стены
     def __init__(self, pos_x, pos_y):
-        super().__init__(tiles_group, all_sprites)
+        super().__init__(tiles_group)
         self.image = images['empty']
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
@@ -126,7 +170,7 @@ class Teleport(BackgroundTile):
 
 class Wall(pygame.sprite.Sprite):  # класс стены
     def __init__(self, pos_x, pos_y):
-        super().__init__(tiles_group, all_sprites, wall_group)
+        super().__init__(tiles_group, wall_group)
         self.image = images['wall']
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
@@ -162,6 +206,8 @@ class Jewel(BackgroundTile):  # класс сокровищ
 
     def update(self):
         if player.pos_x == self.pos_x and player.pos_y == self.pos_y:  # проверяю координаты перса и сокровища
+            weapon_lst.append(MagicWeapon('staff', 'blast', -50, -50, player, player_group, 1, FPS,
+                                          area_width=1, name='меч'))
             self.rand_potion = random.choice(['heal', 'rage', 'speed', 'armor'])  # рандомная зелька
             # добавляем зельку в инвентарь
             if self.rand_potion == 'heal':
@@ -179,12 +225,28 @@ class Jewel(BackgroundTile):  # класс сокровищ
         return 'empty'
 
 
+class Empty:  # класс пустоты для матрицы
+    def __init__(self):
+        pass
+
+    def type(self):
+        return 'empty'
+
+
+class Blocked:  # класс пустоты для матрицы
+    def __init__(self):
+        pass
+
+    def type(self):
+        return 'blocked'
+
+
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         self.speed = 8  # должен быть кратен tile_width
         self.timer_x = Timer(self.speed)
         self.timer_y = Timer(self.speed)
-        super().__init__(player_group, all_sprites, entity_group)
+        super().__init__(player_group, entity_group)
         self.hp_max = 12
         self.hp = self.hp_max
         self.diagonal = False  # переменная, нужная для диагонального хода игроком
@@ -210,9 +272,8 @@ class Player(pygame.sprite.Sprite):
 
     def make_move(self, x_move, y_move):
         if self.diagonal:
-            if self.x_move == 0 and x_move != 0 and self.timer_y.time == 0 and \
-                    board[self.pos_x + x_move][
-                        self.pos_y].type() not in ['wall', 'monster', 'blocked']:
+            if self.x_move == 0 and x_move != 0 and self.timer_y.time == 0 and board[self.pos_x + x_move][
+                self.pos_y].type() not in ['wall', 'monster', 'blocked']:
                 board[self.pos_x + x_move][self.pos_y] = Blocked()
                 self.x_move = x_move
                 self.timer_x.start()
@@ -230,9 +291,8 @@ class Player(pygame.sprite.Sprite):
                 self.y_move = y_move
                 self.timer_y.start()
                 self.diagonal = not self.diagonal
-            if self.x_move == 0 and x_move != 0 and self.timer_y.time == 0 and \
-                    board[self.pos_x + x_move][
-                        self.pos_y].type() not in ['wall', 'monster', 'blocked']:
+            if self.x_move == 0 and x_move != 0 and self.timer_y.time == 0 and board[self.pos_x + x_move][
+                self.pos_y].type() not in ['wall', 'monster', 'blocked']:
                 board[self.pos_x + x_move][self.pos_y] = Blocked()
                 self.x_move = x_move
                 self.timer_x.start()
@@ -268,58 +328,70 @@ class Player(pygame.sprite.Sprite):
             self.kill()
 
 
-class CloseMonster(pygame.sprite.Sprite):
-    def __init__(self, pos_x, pos_y):
-        super().__init__(monster_group, all_sprites, entity_group)
-        self.weapon = CloseWeapon('empty_image', 'close_attack', -50, -50, self, monster_group, 1,
-                                  FPS // 2,
-                                  rang=2.25)  # изменяемый
-        # self.weapon = BulletWeapon(-50, -50, self, monster_group, 1, FPS, speed=10, rang=400)
-        self.hp_max = 10  #
+class Monster(pygame.sprite.Sprite):
+    def __init__(self, pos_x, pos_y, weapon, hp_max, rang_min, rang_max, image_name, close_mode, speed, dop_groups=[]):
+        # self.weapon = CloseWeapon('empty_image', 'close_attack', -50, -50, self, monster_group, 1, FPS // 2,
+        #                           rang=2.25)  # изменяемый
+        weapon.owner = self
+        weapon.fraction = monster_group
+        self.weapon = weapon
+        self.hp_max = hp_max  #
         self.hp = self.hp_max  #
-        self.rang_min = 2  #
-        self.rang_max = 7  #
-        self.image = images['monster']  #
-        self.close_mode = True  #
-        speed = 10  #
+        self.rang_min = rang_min  #
+        self.rang_max = rang_max  #
+        self.image = images[image_name]  #
+        self.close_mode = close_mode  #
+        speed = speed  #
         self.timer_x = Timer(speed)  #
         self.timer_y = Timer(speed)  #
+
         self.x_move, self.y_move = 0, 0
         self.pos_x, self.pos_y = pos_x, pos_y
+        super().__init__(monster_group, entity_group, *dop_groups)
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
         self.next_cell = 0, 0
         self.x, self.y = self.rect.topleft
+        self.state = False
+        self.player_coords_old = player.pos_x, player.pos_y
+        self.coords_old = self.pos_x, self.pos_y
 
     def type(self):
         return 'monster'
 
     def update(self):
-        if not self.close_mode:
-            if abs(self.pos_x - player.pos_x) <= self.rang_max and abs(
-                    self.pos_y - player.pos_y) <= self.rang_max:
-                self.weapon.use(player.rect.x + player.x_move * tile_width,
-                                player.rect.y + player.y_move * tile_height)
+        if not self.close_mode and player.timer_x.time != 0 and player.timer_y.time != 0:
+            if abs(self.pos_x - player.pos_x) <= self.rang_max and abs(self.pos_y - player.pos_y) <= self.rang_max:
+                self.weapon.use(player.rect.x + player.x_move * tile_width, player.rect.y + player.y_move * tile_height)
         else:
-            if abs(self.pos_x - player.pos_x) <= self.rang_min and abs(
-                    self.pos_y - player.pos_y) <= self.rang_min:
+            if abs(self.pos_x - player.pos_x) <= self.rang_min and abs(self.pos_y - player.pos_y) <= self.rang_min:
                 self.weapon.use(player.rect.x, player.rect.y)
 
-        if self.timer_x.time == 0 and self.timer_y.time == 0:
+        if self.timer_x.time == 0 and self.timer_y.time == 0 and abs(
+                self.pos_x - player.pos_x) <= self.rang_max and abs(
+            self.pos_y - player.pos_y) <= self.rang_max:
             path = board.get_path(self.pos_x, self.pos_y, player.pos_x, player.pos_y)
             next_cell = path[1]
-            if board[next_cell[0]][next_cell[1]].type() == 'empty' and abs(
+            state_new = self.state
+            if self.player_coords_old != (player.pos_x, player.pos_y) or self.coords_old != (self.pos_x, self.pos_y):
+                state_new = is_linear_path(*self.rect.center, *player.rect.center, owner=self, target=player,
+                                           fraction=monster_group)
+                self.player_coords_old = player.pos_x, player.pos_y
+                self.coords_old = self.pos_x, self.pos_y
+
+            if abs(
                     self.pos_x - player.pos_x) <= self.rang_max and abs(
                 self.pos_y - player.pos_y) <= self.rang_max:
-                if self.rang_min <= abs(self.pos_x - player.pos_x) or self.rang_min <= abs(
-                        self.pos_y - player.pos_y):
+                if ((self.rang_min <= abs(self.pos_x - player.pos_x) or self.rang_min <= abs(
+                        self.pos_y - player.pos_y)) or not state_new) and board[next_cell[0]][
+                    next_cell[1]].type() == 'empty':
                     self.next_cell = next_cell
                     x_move, y_move = self.next_cell[0] - self.pos_x, self.next_cell[1] - self.pos_y
                 elif board[self.pos_x - (next_cell[0] - self.pos_x)][
                     self.pos_y - (next_cell[1] - self.pos_y)].type() == 'empty' and not (abs(
                     self.pos_x - player.pos_x) == self.rang_min - 1 or abs(
-                    self.pos_y - player.pos_y) == self.rang_min - 1):
+                    self.pos_y - player.pos_y) == self.rang_min - 1) and self.state:
                     self.next_cell = [self.pos_x - (next_cell[0] - self.pos_x),
                                       self.pos_y - (next_cell[1] - self.pos_y)]
                     x_move, y_move = -(next_cell[0] - self.pos_x), -(next_cell[1] - self.pos_y)
@@ -337,6 +409,7 @@ class CloseMonster(pygame.sprite.Sprite):
                     self.y_move = y_move
                     self.timer_y.start()
                     board[self.pos_x][self.pos_y + y_move] = Blocked()
+            self.state = state_new
 
         if self.x_move != 0:
             self.timer_x.tick()
@@ -369,44 +442,9 @@ class CloseMonster(pygame.sprite.Sprite):
             self.kill()
 
 
-class RangedMonster(CloseMonster):
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.weapon = BulletWeapon('empty_image', 'bullet', -50, -50, self, monster_group, 1, FPS,
-                                   speed=7, rang=400)  #
-        self.hp_max = 8  #
-        self.hp = self.hp_max
-        self.rang_min = 5  #
-        self.rang_max = 9  #
-        self.image = images['monster1']  #
-        self.close_mode = False  #
-        speed = 10  #
-        self.timer_x = Timer(speed)  #
-        self.timer_y = Timer(speed)  #
-
-
-class GuardMonster(CloseMonster):
-    def __init__(self, *args):
-        super().__init__(*args)
-        guard_monster_group.add(self)
-        self.weapon = BulletWeapon('empty_image', 'bullet', -50, -50, self, monster_group, 1, FPS,
-                                   speed=12,
-                                   rang=450)  #
-        self.hp_max = 15  #
-        self.hp = self.hp_max
-        self.rang_min = 9  #
-        self.rang_max = 9  #
-        self.image = images['monster2']  #
-        self.close_mode = True  #
-        speed = 30  #
-        self.timer_x = Timer(speed)  #
-        self.timer_y = Timer(speed)  #
-
-
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, picture, x1, y1, x2, y2, fraction, damage, speed, rang, bullet_size,
-                 go_through):
-        super().__init__(all_sprites, attack_group)
+    def __init__(self, picture, x1, y1, x2, y2, fraction, damage, speed, rang, bullet_size, go_through):
+        super().__init__(attack_group)
         self.go_through = go_through
         self.image = images[picture]
         self.image = pygame.transform.scale(self.image, bullet_size)
@@ -441,10 +479,9 @@ class Bullet(pygame.sprite.Sprite):
 
 class CloseAttack(pygame.sprite.Sprite):
     def __init__(self, picture, x, y, rang, rotation, owner, fraction, damage):
-        super().__init__(all_sprites, attack_group)
+        super().__init__(attack_group)
         self.image = images[picture]
-        self.image = pygame.transform.scale(self.image,
-                                            (int(tile_width * rang), int(tile_height * rang)))
+        self.image = pygame.transform.scale(self.image, (int(tile_width * rang), int(tile_height * rang)))
         self.image = pygame.transform.rotate(self.image, rotation)
         self.rect = self.image.get_rect().move(
             x, y)
@@ -460,20 +497,47 @@ class CloseAttack(pygame.sprite.Sprite):
     def update(self):
         self.rect.x, self.rect.y = self.owner.rect.x - self.rect.w // 2 + tile_width * 0.5, self.owner.rect.y - self.rect.h // 2 + tile_width * 0.5
         for i in entity_group:  # проверка на столкновение с монстрами
-            if pygame.sprite.collide_mask(self,
-                                          i) and i not in self.fraction and i not in self.damaged_lst and (
-                    is_linear_path(*self.owner.rect.center, *i.rect.topleft, owner=self.owner,
-                                   target=i,
-                                   fraction=self.fraction) or is_linear_path(*self.owner.rect.center,
-                                                                             *i.rect.topright,
-                                                                             owner=self.owner,
-                                                                             target=i,
+            if pygame.sprite.collide_mask(self, i) and i not in self.fraction and i not in self.damaged_lst and (
+                    is_linear_path(*self.owner.rect.center, *i.rect.topleft, owner=self.owner, target=i,
+                                   fraction=self.fraction) or is_linear_path(*self.owner.rect.center, *i.rect.topright,
+                                                                             owner=self.owner, target=i,
                                                                              fraction=self.fraction) or is_linear_path(
                 *self.owner.rect.center, *i.rect.bottomleft, owner=self.owner, target=i,
-                fraction=self.fraction) or is_linear_path(*self.owner.rect.center,
-                                                          *i.rect.bottomright,
-                                                          owner=self.owner, target=i,
-                                                          fraction=self.fraction)):
+                fraction=self.fraction) or is_linear_path(*self.owner.rect.center, *i.rect.bottomright,
+                                                          owner=self.owner, target=i, fraction=self.fraction)):
+                i.damage(self.dmg)
+                self.damaged_lst.append(i)
+        self.timer.tick()
+        if self.timer.time == 0:
+            self.kill()
+
+
+class MagicAttack(pygame.sprite.Sprite):
+    def __init__(self, picture, x, y, rang, fraction, damage):
+        super().__init__(attack_group)
+        self.image = images[picture]
+        self.image = pygame.transform.scale(self.image, (int(tile_width * rang), int(tile_height * rang)))
+        self.rect = self.image.get_rect().move(
+            x, y)
+        self.rect.x, self.rect.y = x - self.rect.w // 2, y - self.rect.h // 2
+        self.damaged_lst = list()
+        self.mask = pygame.mask.from_surface(self.image)
+        self.timer = Timer(FPS // 4)
+        self.timer.start()
+        self.fraction = fraction
+        self.dmg = damage
+
+    def update(self):
+        for i in entity_group:  # проверка на столкновение с монстрами
+            if pygame.sprite.collide_mask(self, i) and i not in self.fraction and i not in self.damaged_lst and (
+                    is_linear_path(*self.rect.center, *i.rect.topleft, target=i,
+                                   fraction=self.fraction) or is_linear_path(*self.rect.center,
+                                                                             *i.rect.topright,
+                                                                             target=i,
+                                                                             fraction=self.fraction) or is_linear_path(
+                *self.rect.center, *i.rect.bottomleft, target=i,
+                fraction=self.fraction) or is_linear_path(*self.rect.center, *i.rect.bottomright,
+                                                          target=i, fraction=self.fraction)):
                 i.damage(self.dmg)
                 self.damaged_lst.append(i)
         self.timer.tick()
@@ -483,11 +547,10 @@ class CloseAttack(pygame.sprite.Sprite):
 
 class Weapon(pygame.sprite.Sprite):
     def __init__(self, icon, attack_picture, x, y, owner, fraction, damage, cooldown):
-        super().__init__(all_sprites, static_sprites, weapon_group)
+        super().__init__(static_sprites, weapon_group)
         self.owner, self.fraction, self.damage = owner, fraction, damage
         self.timer = Timer(cooldown)
-        self.image = pygame.transform.scale(images[icon],
-                                            (inventory_slot_width, inventory_slot_width))
+        self.image = pygame.transform.scale(images[icon], (inventory_slot_width, inventory_slot_width))
         self.attack_picture = attack_picture
         self.rect = self.image.get_rect().move(
             x, y)
@@ -501,8 +564,7 @@ class Weapon(pygame.sprite.Sprite):
 
 
 class BulletWeapon(Weapon):
-    def __init__(self, *args, speed=10, rang=400, bullet_size=(25, 25), go_through_entities=False,
-                 name=''):
+    def __init__(self, *args, speed=10, rang=400, bullet_size=(25, 25), go_through_entities=False, name=''):
         self.name = name
         super().__init__(*args)
         self.bullet_size = bullet_size
@@ -512,11 +574,25 @@ class BulletWeapon(Weapon):
     def use(self, x, y):
         if self.timer.time == 0:
             self.timer.start()
-            Bullet(self.attack_picture,
-                   self.owner.rect.x + tile_width * 0.5 - self.bullet_size[0] * 0.5,
+            Bullet(self.attack_picture, self.owner.rect.x + tile_width * 0.5 - self.bullet_size[0] * 0.5,
                    self.owner.rect.y + tile_width * 0.5 - self.bullet_size[1] * 0.5, x, y,
                    self.fraction, self.damage,
                    self.speed, self.rang, self.bullet_size, self.go_through_entities)
+
+
+class MagicWeapon(Weapon):
+    def __init__(self, *args, rang=tile_width * 5, area_width=2.15, name=''):
+        self.name = name
+        super().__init__(*args)
+        self.area_width = area_width
+        self.rang = rang
+
+    def use(self, x, y):
+        if self.timer.time == 0:
+            self.timer.start()
+            if abs(x - self.owner.rect.x) <= self.rang and abs(y - self.owner.rect.y) <= self.rang:
+                MagicAttack(self.attack_picture, x, y,
+                            self.area_width, self.fraction, self.damage)
 
 
 class CloseWeapon(Weapon):
@@ -534,8 +610,7 @@ class CloseWeapon(Weapon):
             ugol -= 45
             if vector1[0] < 0:
                 ugol = -ugol - 90
-            CloseAttack(self.attack_picture, self.owner.rect.x + tile_width * 0.5,
-                        self.owner.rect.y + tile_width * 0.5,
+            CloseAttack(self.attack_picture, self.owner.rect.x + tile_width * 0.5, self.owner.rect.y + tile_width * 0.5,
                         self.rang, ugol,
                         self.owner, self.fraction, self.damage)
 
@@ -566,20 +641,61 @@ def generate_level(level):
             elif level[y][x] == 'J':  # сокровище
                 BackgroundTile(x, y)
                 table[x].append(Jewel(x, y))
-            elif level[y][
-                x] == '1':  # монстер обозначается цифрой 1, при добавлнии новых монстров будет 2, 3 и тд
+            elif level[y][x] == '1':  # монстер обозначается цифрой 1, при добавлнии новых монстров будет 2, 3 и тд
                 BackgroundTile(x, y)
-                table[x].append(CloseMonster(x, y))
-            elif level[y][
-                x] == '2':  # монстер обозначается цифрой 1, при добавлнии новых монстров будет 2, 3 и тд
+                table[x].append(
+                    Monster(x, y, CloseWeapon('empty_image', 'close_attack', -50, -50, None, monster_group, 1, FPS // 2,
+                                              rang=2.25), 10, 2, 7, 'monster', True, 10))
+            elif level[y][x] == '2':  # монстер обозначается цифрой 1, при добавлнии новых монстров будет 2, 3 и тд
                 BackgroundTile(x, y)
-                table[x].append(RangedMonster(x, y))
-            elif level[y][
-                x] == '3':  # монстер обозначается цифрой 1, при добавлнии новых монстров будет 2, 3 и тд
+                table[x].append(Monster(x, y,
+                                        BulletWeapon('empty_image', 'bullet', -50, -50, None, monster_group, 1, FPS,
+                                                     speed=8, rang=400), 8, 5, 9, 'monster1', False, 10))
+            elif level[y][x] == '3':  # монстер обозначается цифрой 1, при добавлнии новых монстров будет 2, 3 и тд
                 BackgroundTile(x, y)
-                table[x].append(GuardMonster(x, y))
+                table[x].append(
+                    Monster(x, y, BulletWeapon('empty_image', 'bullet', -50, -50, None, monster_group, 1, FPS, speed=15,
+                                               rang=450), 15, 9, 9, 'monster2', False, 30,
+                            dop_groups=[guard_monster_group]))
     # вернем игрока, а также размер поля в клетках
     return Board(table), player_coords[0], player_coords[1]
+
+
+class Camera:
+    # зададим начальный сдвиг камеры
+    def __init__(self):
+        self.dx = 0
+        self.dy = 0
+        self.dx_total = 0
+        self.dy_total = 0
+
+    # сдвинуть объект obj на смещение камеры
+    def apply(self, obj):
+        obj.rect.x += self.dx
+        obj.rect.y += self.dy
+
+    # позиционировать камеру на объекте target
+    def update(self, target):
+        self.dx = -(target.rect.x + target.rect.w // 2 - WIDTH // 2)
+        self.dy = -(target.rect.y + target.rect.h // 2 - HEIGHT // 2)
+        self.dx_total += self.dx
+        self.dy_total += self.dy
+
+
+def is_linear_path(x1, y1, x2, y2, owner=None, fraction=[], target=None, go_through_entities=False):
+    a = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+    vector = ((x2 - x1) / a, (y2 - y1) / a)
+    while abs(int(x1) - int(x2)) > 3 or abs(int(y1) - int(y2)) > 3:
+        for i in wall_group:
+            if i.rect.collidepoint(x1, y1) and i != owner and i != target and i not in fraction:
+                return False
+        if not go_through_entities:
+            for i in entity_group:
+                if i.rect.collidepoint(x1, y1) and i != owner and i != target and i not in fraction:
+                    return False
+        x1 += vector[0]
+        y1 += vector[1]
+    return True
 
 
 class Board:  # класс матрицы доски
@@ -593,8 +709,7 @@ class Board:  # класс матрицы доски
 
     def get_path(self, x1, y1, x2, y2):  # поиск пути
         n = 1
-        matrix = [list(map(lambda x: False if x.type() in ['wall', 'monster', 'blocked'] else -1, i))
-                  for i in
+        matrix = [list(map(lambda x: False if x.type() in ['wall', 'monster', 'blocked'] else -1, i)) for i in
                   self.table]
         matrix[x1][y1] = 1
         while matrix[x2][y2] == -1:
@@ -602,43 +717,34 @@ class Board:  # класс матрицы доски
             for x in range(self.width):
                 for y in range(self.height):
                     if matrix[x][y] == n:
-                        if 0 <= x - 1 < self.width and 0 <= y < self.height and matrix[x - 1][
-                            y] == -1:
+                        if 0 <= x - 1 < self.width and 0 <= y < self.height and matrix[x - 1][y] == -1:
                             matrix[x - 1][y] = n + 1
                             flag = True
-                        if 0 <= x + 1 < self.width and 0 <= y < self.height and matrix[x + 1][
-                            y] == -1:
+                        if 0 <= x + 1 < self.width and 0 <= y < self.height and matrix[x + 1][y] == -1:
                             matrix[x + 1][y] = n + 1
                             flag = True
-                        if 0 <= x < self.width and 0 <= y - 1 < self.height and matrix[x][
-                            y - 1] == -1:
+                        if 0 <= x < self.width and 0 <= y - 1 < self.height and matrix[x][y - 1] == -1:
                             matrix[x][y - 1] = n + 1
                             flag = True
-                        if 0 <= x < self.width and 0 <= y + 1 < self.height and matrix[x][
-                            y + 1] == -1:
+                        if 0 <= x < self.width and 0 <= y + 1 < self.height and matrix[x][y + 1] == -1:
                             matrix[x][y + 1] = n + 1
                             flag = True
             n += 1
             if not flag:
                 n = 1
-                matrix = [list(map(lambda x: False if x.type() in ['wall'] else -1, i)) for i in
-                          self.table]
+                matrix = [list(map(lambda x: False if x.type() in ['wall'] else -1, i)) for i in self.table]
                 matrix[x1][y1] = 1
                 while matrix[x2][y2] == -1:
                     for x in range(self.width):
                         for y in range(self.height):
                             if matrix[x][y] == n:
-                                if 0 <= x - 1 < self.width and 0 <= y < self.height and \
-                                        matrix[x - 1][y] == -1:
+                                if 0 <= x - 1 < self.width and 0 <= y < self.height and matrix[x - 1][y] == -1:
                                     matrix[x - 1][y] = n + 1
-                                if 0 <= x + 1 < self.width and 0 <= y < self.height and \
-                                        matrix[x + 1][y] == -1:
+                                if 0 <= x + 1 < self.width and 0 <= y < self.height and matrix[x + 1][y] == -1:
                                     matrix[x + 1][y] = n + 1
-                                if 0 <= x < self.width and 0 <= y - 1 < self.height and matrix[x][
-                                    y - 1] == -1:
+                                if 0 <= x < self.width and 0 <= y - 1 < self.height and matrix[x][y - 1] == -1:
                                     matrix[x][y - 1] = n + 1
-                                if 0 <= x < self.width and 0 <= y + 1 < self.height and matrix[x][
-                                    y + 1] == -1:
+                                if 0 <= x < self.width and 0 <= y + 1 < self.height and matrix[x][y + 1] == -1:
                                     matrix[x][y + 1] = n + 1
                     n += 1
         # print(*matrix, sep='\n')
@@ -668,25 +774,9 @@ class Board:  # класс матрицы доски
         return lst[::-1]
 
 
-def is_linear_path(x1, y1, x2, y2, owner=None, fraction=[], target=None, go_through_entities=False):
-    a = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-    vector = ((x2 - x1) / a, (y2 - y1) / a)
-    while abs(int(x1) - int(x2)) > 3 or abs(int(y1) - int(y2)) > 3:
-        for i in wall_group:
-            if i.rect.collidepoint(x1, y1) and i != owner and i != target and i not in fraction:
-                return False
-        if not go_through_entities:
-            for i in entity_group:
-                if i.rect.collidepoint(x1, y1) and i != owner and i != target and i not in fraction:
-                    return False
-        x1 += vector[0]
-        y1 += vector[1]
-    return True
-
-
 class StaticSprite(pygame.sprite.Sprite):
     def __init__(self, x, y, img_name):
-        super().__init__(all_sprites, inventar_group, static_sprites)
+        super().__init__(inventar_group, static_sprites)
         self.image = images[img_name]
         self.rect = self.image.get_rect().move(
             x, y)
@@ -694,20 +784,9 @@ class StaticSprite(pygame.sprite.Sprite):
 
 
 class Inventory:  # класс иневентаря. В игре он снизу слева
+
     def __init__(self):
-        self.items = [
-            CloseWeapon('sword', 'close_attack1', -50, -50, player, player_group, 2, FPS // 2,
-                        rang=4.25, name='меч'), BulletWeapon('gun', 'bullet', -50, -50,
-                                                             player,
-                                                             player_group,
-                                                             1.5, FPS // 2,
-                                                             speed=12,
-                                                             rang=300, name='пистолет',
-                                                             bullet_size=(25, 25))]
         self.current_slot = 0
-        for i in range(len(self.items)):
-            self.items[i].rect.x = inventory_slot_width * i
-            self.items[i].rect.y = HEIGHT - inventory_slot_width
         self.hp_potions = 0  # кол-во зелий, которые лечат 5хп
         self.rage_potion = 0  # кол-во зелий, которые увеличивают урон в 2 раза на 10 сек
         self.armor_potion = 0  # кол-во зелий, которые уменьшают получаемый урон до 0 на 5 сек
@@ -733,8 +812,8 @@ class Inventory:  # класс иневентаря. В игре он снизу
         self.weapon_frame = StaticSprite(0, HEIGHT - inventory_slot_width, 'frame')
 
     def use_weapon(self):
-        if self.current_slot < len(self.items):
-            self.items[self.current_slot].use(*pos)
+        if self.current_slot < len(weapon_lst):
+            weapon_lst[self.current_slot].use(*pos)
 
     def plus_hp_potion(self):  # +1 зелье, которое лечит 5хп
         self.hp_potions += 1
@@ -779,45 +858,29 @@ class Inventory:  # класс иневентаря. В игре он снизу
         inventar_group.update()  # обновляем положение инвентаря
         inventar_group.draw(screen)  # выводим инвентарь на экран
         weapon_group.draw(screen)
-        text = font_for_inventory.render(f"{inventory.hp_potions}", True,
-                                         (255, 0, 0))  # кол-во зелий hp
+        text = font_for_inventory.render(f"{inventory.hp_potions}", True, (255, 0, 0))  # кол-во зелий hp
+        screen.blit(text, (inventory_slot_width * 6 + 5, HEIGHT - 10))  # выводим кол-во зелий хп около зелья хп
+        text = font_for_inventory.render(f"{inventory.rage_potion}", True, (255, 0, 0))  # кол-во зелий ярости
+        screen.blit(text, (inventory_slot_width * 7 + 5, HEIGHT - 10))  # выводим кол-во зелий ярости около зелья ярости
+        text = font_for_inventory.render(f"{inventory.armor_potion}", True, (255, 0, 0))  # кол-во зелий неуязвимости
         screen.blit(text, (
-        inventory_slot_width * 6 + 5, HEIGHT - 10))  # выводим кол-во зелий хп около зелья хп
-        text = font_for_inventory.render(f"{inventory.rage_potion}", True,
-                                         (255, 0, 0))  # кол-во зелий ярости
-        screen.blit(text, (
-        inventory_slot_width * 7 + 5, HEIGHT - 10))  # выводим кол-во зелий ярости около зелья ярости
-        text = font_for_inventory.render(f"{inventory.armor_potion}", True,
-                                         (255, 0, 0))  # кол-во зелий неуязвимости
-        screen.blit(text, (
-            inventory_slot_width * 8 + 5,
-            HEIGHT - 10))  # выводим кол-во зелий неуязвимости около зелья неуязвимости
-        text = font_for_inventory.render(f"{inventory.speed_potion}", True,
-                                         (255, 0, 0))  # кол-во зелий скорости
+            inventory_slot_width * 8 + 5, HEIGHT - 10))  # выводим кол-во зелий неуязвимости около зелья неуязвимости
+        text = font_for_inventory.render(f"{inventory.speed_potion}", True, (255, 0, 0))  # кол-во зелий скорости
         screen.blit(text,
-                    (inventory_slot_width * 9 + 5,
-                     HEIGHT - 10))  # выводим кол-во зелий скорости около зелья скорости
+                    (inventory_slot_width * 9 + 5, HEIGHT - 10))  # выводим кол-во зелий скорости около зелья скорости
 
-        text = font_for_inventory.render(f"{6}", True,
-                                         (0, 255, 0))  # зелье хп активируется при нажатии на 1
+        text = font_for_inventory.render(f"{6}", True, (0, 255, 0))  # зелье хп активируется при нажатии на 1
         screen.blit(text, (
-            inventory_slot_width * 6 + 5,
-            HEIGHT - inventory_slot_width - 10))  # выводим зеленым шрифтом цифру 1
-        text = font_for_inventory.render(f"{7}", True,
-                                         (0, 255, 0))  # зелье ярости активируется при нажатии на 2
+            inventory_slot_width * 6 + 5, HEIGHT - inventory_slot_width - 10))  # выводим зеленым шрифтом цифру 1
+        text = font_for_inventory.render(f"{7}", True, (0, 255, 0))  # зелье ярости активируется при нажатии на 2
         screen.blit(text, (
-            inventory_slot_width * 7 + 5,
-            HEIGHT - inventory_slot_width - 10))  # выводим зеленым шрифтом цифру 2
-        text = font_for_inventory.render(f"{8}", True, (
-        0, 255, 0))  # зелье неуязвимости активируется при нажатии на 3
+            inventory_slot_width * 7 + 5, HEIGHT - inventory_slot_width - 10))  # выводим зеленым шрифтом цифру 2
+        text = font_for_inventory.render(f"{8}", True, (0, 255, 0))  # зелье неуязвимости активируется при нажатии на 3
         screen.blit(text, (
-            inventory_slot_width * 8 + 5,
-            HEIGHT - inventory_slot_width - 10))  # выводим зеленым шрифтом цифру 3
-        text = font_for_inventory.render(f"{9}", True,
-                                         (0, 255, 0))  # зелье скорости активируется при нажатии на 4
+            inventory_slot_width * 8 + 5, HEIGHT - inventory_slot_width - 10))  # выводим зеленым шрифтом цифру 3
+        text = font_for_inventory.render(f"{9}", True, (0, 255, 0))  # зелье скорости активируется при нажатии на 4
         screen.blit(text, (
-            inventory_slot_width * 9 + 5,
-            HEIGHT - inventory_slot_width - 10))  # выводим зеленым шрифтом цифру 4
+            inventory_slot_width * 9 + 5, HEIGHT - inventory_slot_width - 10))  # выводим зеленым шрифтом цифру 4
 
         inventory.rage_timer.tick()  # если зелье активно, то уменьшаем время действия до 0. Иначе 0
         inventory.armor_timer.tick()  # если зелье активно, то уменьшаем время действия до 0. Иначе 0
@@ -852,19 +915,37 @@ def draw_hp(entity):
     screen.blit(text, (entity.rect.x, entity.rect.y - text.get_height() - 20))
 
 
+player_group = pygame.sprite.Group()
+entity_group = pygame.sprite.Group()
+static_sprites = pygame.sprite.Group()
+weapon_group = pygame.sprite.Group()
 player = Player(0, 0)
+direction = [0, 0]
 weapon_lst = [CloseWeapon('sword', 'close_attack1', -50, -50, player, player_group, 2, FPS // 2,
                           rang=4.25, name='меч'), BulletWeapon('gun', 'bullet', -50, -50,
                                                                player,
                                                                player_group,
                                                                1.5, FPS // 2,
-                                                               speed=10,
+                                                               speed=13,
                                                                rang=400, name='пистолет')]
 
 for map_name in ['map.txt', 'map1.txt']:
+    is_portal_activated = False
+    is_game_over = False
+    tiles_group = pygame.sprite.Group()
+    wall_group = pygame.sprite.Group()
+    monster_group = pygame.sprite.Group()
+    guard_monster_group = pygame.sprite.Group()
+    entity_group = pygame.sprite.Group()  # игроки и мобы
+    attack_group = pygame.sprite.Group()
+    static_sprites = pygame.sprite.Group()
+    weapon_group = pygame.sprite.Group()
+    inventar_group = pygame.sprite.Group()
+    game_over_group = pygame.sprite.Group()
     entity_group.add(player)
     static_sprites.add(*weapon_lst)
     static_sprites.add(*weapon_lst)
+    weapon_group.add(*weapon_lst)
     flag = 1
     running = True
     pos = 0, 0
@@ -874,6 +955,9 @@ for map_name in ['map.txt', 'map1.txt']:
     is_clicked_r, is_clicked_l = False, False
     inventory = Inventory()
     font_for_inventory = pygame.font.Font(None, 20)
+    all_sprites = pygame.sprite.Group()
+    all_sprites.add(tiles_group, wall_group, entity_group, player_group, guard_monster_group, monster_group,
+                    attack_group, static_sprites, weapon_group, inventar_group, game_over_group)
     while running:
         # изменяем ракурс камеры
         # внутри игрового цикла ещё один цикл
@@ -910,7 +994,7 @@ for map_name in ['map.txt', 'map1.txt']:
                 player.timer_y.time_max = 4
                 player.hp = 1000
                 player.hp_max = 1000
-                for i in inventory.items:
+                for i in weapon_lst:
                     i.damage = 1000
 
             if event.type == pygame.MOUSEMOTION:
@@ -922,24 +1006,23 @@ for map_name in ['map.txt', 'map1.txt']:
                 inventory.hp_plus()
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 4:  # колесико мыши вверх дает +1 зелье урона
-                if inventory.current_slot != len(inventory.items) - 1:
-                    inventory.current_slot += 1
-                    inventory.weapon_frame.rect.x += inventory_slot_width
+                if inventory.current_slot != 0:
+                    inventory.current_slot -= 1
+                    inventory.weapon_frame.rect.x -= inventory_slot_width
                 else:
-                    inventory.current_slot = 0
-                    inventory.weapon_frame.rect.x = 0
-
+                    inventory.current_slot = len(weapon_lst) - 1
+                    inventory.weapon_frame.rect.x = inventory_slot_width * (len(weapon_lst) - 1)
                 inventory.plus_rage_potion()
             if event.type == pygame.KEYDOWN and event.key == pygame.K_7:  # активирует зелье урона
                 inventory.plus_damage()
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 5:  # колесико мыши вниз дает +1 зелье неуязвимости
-                if inventory.current_slot != 0:
-                    inventory.current_slot -= 1
-                    inventory.weapon_frame.rect.x -= inventory_slot_width
+                if inventory.current_slot != len(weapon_lst) - 1:
+                    inventory.current_slot += 1
+                    inventory.weapon_frame.rect.x += inventory_slot_width
                 else:
-                    inventory.current_slot = len(inventory.items) - 1
-                    inventory.weapon_frame.rect.x = inventory_slot_width * (len(inventory.items) - 1)
+                    inventory.current_slot = 0
+                    inventory.weapon_frame.rect.x = 0
 
                 inventory.plus_armor_potion()
             if event.type == pygame.KEYDOWN and event.key == pygame.K_8:  # активирует зелье неуязвимости
@@ -969,6 +1052,9 @@ for map_name in ['map.txt', 'map1.txt']:
                     direction[1] -= 1
                 if event.key == pygame.K_a:
                     direction[0] += 1
+        for i in range(len(weapon_lst)):
+            weapon_lst[i].rect.x = inventory_slot_width * i
+            weapon_lst[i].rect.y = HEIGHT - inventory_slot_width
         if inventory.speed_timer.time > 0 and flag:
             player.speed = 5
             player.timer_x = Timer(player.speed)
