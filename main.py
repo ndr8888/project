@@ -51,20 +51,15 @@ images = {
     'monster2': pygame.transform.scale(load_image('enemy2.png'), (tile_width, tile_height)),
     'player': pygame.transform.scale(load_image('mar.png'), (tile_width, tile_height)),
     'game_over': pygame.transform.scale(load_image('gameover.png'), (WIDTH, HEIGHT)),
-    'inventory_slot': pygame.transform.scale(load_image('inventory_slot.png'),
-                                             (inventory_slot_width, inventory_slot_width)),
-    'inventory_slot2': pygame.transform.scale(load_image('inventory_slot2.png'),
-                                              (inventory_slot_width, inventory_slot_width)),
+    'inventory_slot': pygame.transform.scale(load_image('inventory_slot.png'), (inventory_slot_width, inventory_slot_width)),
+    'inventory_slot2': pygame.transform.scale(load_image('inventory_slot2.png'), (inventory_slot_width, inventory_slot_width)),
     'sword': load_image('sword.png'),
     'gun': load_image('gun.png'),
     'frame': pygame.transform.scale(load_image('frame.png'), (inventory_slot_width, inventory_slot_width)),
-    'health_potion': pygame.transform.scale(load_image('health_potion.png'),
-                                            (inventory_slot_width, inventory_slot_width)),
-    'shield_potion': pygame.transform.scale(load_image('shield_potion.png'),
-                                            (inventory_slot_width, inventory_slot_width)),
+    'health_potion': pygame.transform.scale(load_image('health_potion.png'), (inventory_slot_width, inventory_slot_width)),
+    'shield_potion': pygame.transform.scale(load_image('shield_potion.png'), (inventory_slot_width, inventory_slot_width)),
     'rage_potion': pygame.transform.scale(load_image('rage_potion.png'), (inventory_slot_width, inventory_slot_width)),
-    'speed_potion': pygame.transform.scale(load_image('speed_potion.png'),
-                                           (inventory_slot_width, inventory_slot_width)),
+    'speed_potion': pygame.transform.scale(load_image('speed_potion.png'), (inventory_slot_width, inventory_slot_width)),
     'teleport': pygame.transform.scale(load_image('teleport.png'), (tile_width, tile_height)),
     'teleport1': pygame.transform.scale(load_image('teleport1.png'), (tile_width, tile_height)),
     'key': pygame.transform.scale(load_image('key.png'), (tile_width, tile_height)),
@@ -134,7 +129,6 @@ class BackgroundTile(pygame.sprite.Sprite):  # класс фоновой кар�
             tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
 
-
 class Key(BackgroundTile):
     def __init__(self, pos_x, pos_y):
         super().__init__(pos_x, pos_y)
@@ -149,7 +143,6 @@ class Key(BackgroundTile):
 
     def type(self):
         return 'empty'
-
 
 class Teleport(BackgroundTile):
     def __init__(self, pos_x, pos_y):
@@ -178,7 +171,6 @@ class Wall(pygame.sprite.Sprite):  # класс стены
 
     def type(self):  # возвращает строку типа спрайта, нужно для использования спрайтов в матрице
         return 'wall'
-
 
 class WallTriggerable(Wall):
     def __init__(self, pos_x, pos_y):
@@ -451,7 +443,6 @@ class Bullet(pygame.sprite.Sprite):
         self.vector = ((x2 - x1) / a, (y2 - y1) / a)
         self.live_timer = Timer(rang)
         self.live_timer.start()
-
     def update(self):
         old_x, old_y = self.x1, self.y1
         self.x1, self.y1 = self.x1 + self.vector[0] * self.vel, self.y1 + self.vector[1] * self.vel
@@ -760,7 +751,6 @@ class Board:  # класс матрицы доски
             n -= 1
         return lst[::-1]
 
-
 class StaticSprite(pygame.sprite.Sprite):
     def __init__(self, x, y, img_name):
         super().__init__(all_sprites, inventar_group, static_sprites)
@@ -873,8 +863,6 @@ class Inventory:  # класс иневентаря. В игре он снизу
         inventory.armor_timer.tick()  # если зелье активно, то уменьшаем время действия до 0. Иначе 0
         inventory.speed_timer.tick()
 
-
-
 class Gameover(pygame.sprite.Sprite):
     def __init__(self):
         global is_game_over
@@ -983,6 +971,7 @@ for map_name in ['map.txt', 'map1.txt']:
                 for i in weapon_lst:
                     i.damage = 1000
 
+
             if event.type == pygame.MOUSEMOTION:
                 pos = event.pos
 
@@ -992,9 +981,9 @@ for map_name in ['map.txt', 'map1.txt']:
                 inventory.hp_plus()
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 4:  # колесико мыши вверх дает +1 зелье урона
-                if inventory.current_slot != 0:
-                    inventory.current_slot -= 1
-                    inventory.weapon_frame.rect.x -= inventory_slot_width
+                if inventory.current_slot != len(inventory.items) - 1:
+                    inventory.current_slot += 1
+                    inventory.weapon_frame.rect.x += inventory_slot_width
                 else:
                     inventory.current_slot = len(weapon_lst) - 1
                     inventory.weapon_frame.rect.x = inventory_slot_width * (len(weapon_lst) - 1)
