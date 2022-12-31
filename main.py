@@ -72,6 +72,8 @@ images = {
     'blast': load_image('blast.png'),
     'staff': load_image('staff.png'),
     'cross': load_image('cross.png'),
+    'boom': load_image('boom.png'),
+    'bomb': load_image('bomb2.png')
 }
 FPS = 60
 
@@ -546,6 +548,45 @@ class MagicAttack(pygame.sprite.Sprite):
             self.kill()
 
 
+class Bomb(pygame.sprite.Sprite):
+    def __init__(self, picture, x1, y1, x2, y2, fraction, damage, speed, rang, bullet_size, area_width, blast_image):
+        super().__init__(all_sprites, attack_group)
+        self.image = images[picture]
+        self.blast_image = blast_image
+        self.area_width = area_width
+        self.image = pygame.transform.scale(self.image, bullet_size)
+        self.rect = self.image.get_rect().move(x1, y1)
+        self.mask = pygame.mask.from_surface(self.image)
+        self.x1, self.y1, self.x2, self.y2 = x1, y1, x2, y2
+        self.fraction = fraction
+        self.vel = speed
+        self.dmg = damage
+        a = math.sqrt((self.x2 - self.x1) ** 2 + (self.y2 - self.y1) ** 2)
+        self.vector = ((x2 - x1) / a, (y2 - y1) / a)
+        self.live_timer = Timer(rang)
+        self.live_timer.start()
+
+    def update(self):
+        old_x, old_y = self.x1, self.y1
+        self.x1, self.y1 = self.x1 + self.vector[0] * self.vel, self.y1 + self.vector[1] * self.vel
+        self.rect.x += self.x1 - old_x
+        self.rect.y += self.y1 - old_y
+        for i in entity_group:  # проверка на столкновение с монстрами
+            if pygame.sprite.collide_mask(self, i) and i not in self.fraction:
+                MagicAttack(self.blast_image, self.rect.x + self.rect.width / 2, self.rect.y + self.rect.height / 2, self.area_width, self.fraction, self.dmg)
+                self.kill()
+        for i in wall_group:  # проверка на столкновение со стенами
+            if pygame.sprite.collide_mask(self, i):
+                MagicAttack(self.blast_image, self.rect.x + self.rect.width / 2, self.rect.y + self.rect.height / 2,
+                            self.area_width, self.fraction, self.dmg)
+                self.kill()
+        self.live_timer.tick(self.vel)
+        if self.live_timer.time == 0:
+            print(self.rect.width / 2, self.area_width * tile_width / 2)
+            MagicAttack(self.blast_image, self.rect.x + self.rect.width / 2, self.rect.y + self.rect.height / 2, self.area_width, self.fraction, self.dmg)
+            self.kill()
+
+
 class Weapon(pygame.sprite.Sprite):
     def __init__(self, icon, attack_picture, x, y, owner, fraction, damage, cooldown):
         super().__init__(all_sprites, static_sprites, weapon_group)
@@ -565,7 +606,7 @@ class Weapon(pygame.sprite.Sprite):
 
 
 class BulletWeapon(Weapon):
-    def __init__(self, *args, speed=10, rang=400, bullet_size=(25, 25), go_through_entities=False, name=''):
+    def __init__(self, *args, speed=10, rang=tile_width * 8, bullet_size=(25, 25), go_through_entities=False, name=''):
         self.name = name
         super().__init__(*args)
         self.bullet_size = bullet_size
@@ -618,6 +659,23 @@ class CloseWeapon(Weapon):
                         self.rang, ugol,
                         self.owner, self.fraction, self.damage)
 
+class BombWeapon(Weapon):
+    def __init__(self, *args, speed=10, rang=tile_width * 8, bullet_size=(25, 25), area_width=4, name='', blast_image='boom'):
+        self.name = name
+        self.area_width = area_width
+        super().__init__(*args)
+        self.bullet_size = bullet_size
+        self.speed, self.rang = speed, rang
+        self.blast_image = blast_image
+
+    def use(self, x, y):
+        if self.timer.time == 0:
+            self.timer.start()
+            Bomb(self.attack_picture, self.owner.rect.x + tile_width * 0.5 - self.bullet_size[0] * 0.5,
+                   self.owner.rect.y + tile_width * 0.5 - self.bullet_size[1] * 0.5, x, y,
+                   self.fraction, self.damage,
+                   self.speed, self.rang, self.bullet_size, self.area_width, self.blast_image)
+
 
 def generate_level(level):
     x, y = None, None
@@ -661,6 +719,11 @@ def generate_level(level):
                     Monster(x, y, BulletWeapon('empty_image', 'bullet', -50, -50, None, monster_group, 1, FPS, speed=15,
                                                rang=450), 15, 9, 9, 'monster2', False, 30,
                             dop_groups=[guard_monster_group]))
+            elif level[y][x] == '4':  # монстер обозначается цифрой 1, при добавлнии новых монстров будет 2, 3 и тд
+                BackgroundTile(x, y)
+                table[x].append(Monster(x, y,
+                                        BombWeapon('empty_image', 'bomb', -50, -50, None, monster_group, 1, FPS,
+                                                     speed=8, rang=400), 8, 5, 9, 'monster1', False, 10))
     # вернем игрока, а также размер поля в клетках
     return Board(table), *player_coords
 
@@ -932,7 +995,7 @@ weapon_lst = [CloseWeapon('sword', 'close_attack1', -50, -50, player, player_gro
                                                                player_group,
                                                                1.5, FPS // 2,
                                                                speed=13,
-                                                               rang=400, name='пистолет')]
+                                                               rang=400, name='пистолет'), BombWeapon('bomb', 'bomb', -50, -50, player, player_group, 1.5, FPS)]
 
 for map_name in ['map.txt', 'map1.txt']:
     is_portal_activated = False
