@@ -32,7 +32,7 @@ FPS = 60
 start_screen()
 
 
-running = True
+level_running = True
 pos = 0, 0
 board, player, level_x, level_y = generate_level(load_level(map_name))
 camera = Camera()
@@ -41,14 +41,14 @@ is_clicked = False
 close_weapon, range_weapon = CloseWeapon(-50, -50, player, player_group, 3, FPS // 3), BulletWeapon(-50, -50, player, player_group, 3, FPS // 3, speed=10, rang=400)
 inventory = Inventory()
 font_for_inventory = pygame.font.Font(None, 20)
-while running:
+while level_running:
     # изменяем ракурс камеры
     # внутри игрового цикла ещё один цикл
     # приёма и обработки сообщений
     for event in pygame.event.get():
         # при закрытии окна
         if event.type == pygame.QUIT:
-            running = False
+            level_running = False
         if event.type == pygame.MOUSEBUTTONDOWN:
             is_clicked = True
         if event.type == pygame.MOUSEBUTTONUP:

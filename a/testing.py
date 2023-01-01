@@ -400,19 +400,19 @@ def draw_hp(entity):
     screen.blit(text, (entity.rect.x, entity.rect.y - text.get_height() - 20))
 
 
-running = True
+level_running = True
 pos = None
 board, player, level_x, level_y = generate_level(load_level(map_name))
 camera = Camera()
 direction = [0, 0]
-while running:
+while level_running:
     # изменяем ракурс камеры
     # внутри игрового цикла ещё один цикл
     # приёма и обработки сообщений
     for event in pygame.event.get():
         # при закрытии окна
         if event.type == pygame.QUIT:
-            running = False
+            level_running = False
         if event.type == pygame.MOUSEBUTTONDOWN:
             pass
         if event.type == pygame.KEYDOWN:
