@@ -67,13 +67,14 @@ images = {
                                            (inventory_slot_width, inventory_slot_width)),
     'teleport': pygame.transform.scale(load_image('teleport.png'), (tile_width, tile_height)),
     'teleport1': pygame.transform.scale(load_image('teleport1.png'), (tile_width, tile_height)),
-    'key': pygame.transform.scale(load_image('key.png'), (tile_width, tile_height)),
+    'key': pygame.transform.scale(load_image('teleport.png'), (tile_width, tile_height)),
     'Jevel': pygame.transform.scale(load_image('Jewel.png'), (tile_width, tile_height)),
     'blast': load_image('blast.png'),
     'staff': load_image('staff.png'),
     'cross': load_image('cross.png'),
     'boom': load_image('boom.png'),
-    'bomb': load_image('bomb2.png')
+    'bomb': load_image('bomb2.png'),
+    'snare': load_image('snare.png')
 }
 FPS = 60
 
@@ -143,6 +144,25 @@ class BackgroundTile(pygame.sprite.Sprite):  # класс фоновой кар�
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
+
+
+class Snare(BackgroundTile):
+    def __init__(self, pos_x, pos_y, vel_x=0, vel_y=0):
+        super().__init__(pos_x, pos_y)
+        self.image = images['snare']
+        self.pos_x, self.pos_y = pos_x, pos_y
+        self.vel_x, self.vel_y = vel_x, vel_y
+
+    def update(self):
+        if self.vel_x:
+            self.pos_x += self.vel_x
+        if self.vel_y:
+            self.pos_y += self.vel_y
+        if player.pos_x == self.pos_x and player.pos_y == self.pos_y:
+            player.hp = 0
+
+    def type(self):
+        return 'empty'
 
 
 class Key(BackgroundTile):
@@ -309,33 +329,34 @@ class Player(pygame.sprite.Sprite):
                 self.diagonal = not self.diagonal
 
     def update(self):
-        if self.x_move != 0:
-            self.timer_x.tick()
-            self.x += self.x_move * (tile_width / self.timer_x.time_max)
-            self.rect.x = self.x + camera.dx_total
-            if self.timer_x.time == 0:
-                board[self.pos_x][self.pos_y] = Empty()
-                self.pos_x += self.x_move
-                board[self.pos_x][self.pos_y] = player
-                self.x_move = 0
-        if self.y_move != 0:
-            self.timer_y.tick()
-            self.y += self.y_move * (tile_width / self.timer_y.time_max)
-            self.rect.y = self.y + camera.dy_total
-            if self.timer_y.time == 0:
-                board[self.pos_x][self.pos_y] = Empty()
-                self.pos_y += self.y_move
-                board[self.pos_x][self.pos_y] = player
-                self.y_move = 0
+        if self.hp <= 0:
+            Gameover()
+            self.kill()
+        else:
+            if self.x_move != 0:
+                self.timer_x.tick()
+                self.x += self.x_move * (tile_width / self.timer_x.time_max)
+                self.rect.x = self.x + camera.dx_total
+                if self.timer_x.time == 0:
+                    board[self.pos_x][self.pos_y] = Empty()
+                    self.pos_x += self.x_move
+                    board[self.pos_x][self.pos_y] = player
+                    self.x_move = 0
+            if self.y_move != 0:
+                self.timer_y.tick()
+                self.y += self.y_move * (tile_width / self.timer_y.time_max)
+                self.rect.y = self.y + camera.dy_total
+                if self.timer_y.time == 0:
+                    board[self.pos_x][self.pos_y] = Empty()
+                    self.pos_y += self.y_move
+                    board[self.pos_x][self.pos_y] = player
+                    self.y_move = 0
 
     def damage(self, n):
         if inventory.armor_timer.time:
             self.hp -= n * 0
         else:
             self.hp -= n * 1
-        if self.hp <= 0:
-            Gameover()
-            self.kill()
 
 
 class Monster(pygame.sprite.Sprite):
@@ -710,6 +731,9 @@ def generate_level(level):
             elif level[y][x] == 'J':  # сокровище
                 BackgroundTile(x, y)
                 table[x].append(Jewel(x, y))
+            elif level[y][x] == 'S':
+                BackgroundTile(x, y)
+                table[x].append(Snare(x, y))
             elif level[y][x] == '1':  # монстер обозначается цифрой 1, при добавлнии новых монстров будет 2, 3 и тд
                 BackgroundTile(x, y)
                 table[x].append(
@@ -732,7 +756,7 @@ def generate_level(level):
                                         BombWeapon('empty_image', 'bomb', -50, -50, None, monster_group, 1, FPS,
                                                      speed=8, rang=400), 8, 5, 9, 'monster1', False, 10))
     # вернем игрока, а также размер поля в клетках
-    return Board(table), *player_coords
+    return Board(table), player_coords[0], player_coords[1]
 
 
 class Camera:
