@@ -89,31 +89,38 @@ def start_screen():
                   "Если в правилах несколько строк,",
                   "приходится выводить их построчно"]
 
-    fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
-    screen.blit(fon, (0, 0))
-    font = pygame.font.Font(None, 30)
+    # fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
+    # screen.blit(fon, (0, 0))
     text_coord = 50
-    for line in intro_text:
-        string_rendered = font.render(line, 1, pygame.Color('white'))
-        intro_rect = string_rendered.get_rect()
-        text_coord += 10
-        intro_rect.top = text_coord
-        intro_rect.x = 10
-        text_coord += intro_rect.height
-        screen.blit(string_rendered, intro_rect)
 
     while True:
+        screen.fill((0, 0, 0))
+        text_coord = 50
+        font = pygame.font.Font(None, 25)
+        for line in intro_text:
+            string_rendered = font.render(line, 1, pygame.Color('white'))
+            intro_rect = string_rendered.get_rect()
+            text_coord += 10
+            intro_rect.top = text_coord
+            intro_rect.x = 10
+            text_coord += intro_rect.height
+            screen.blit(string_rendered, intro_rect)
+        font = pygame.font.Font(None, 50)
+        text = font.render("Начать игру", True, (100, 255, 100))
+        text_x = WIDTH // 2 - text.get_width() // 2
+        text_y = HEIGHT // 2 - text.get_height() // 2
+        text_w = text.get_width()
+        text_h = text.get_height()
+        screen.blit(text, (text_x, text_y))
+        pygame.draw.rect(screen, (0, 255, 0), (text_x - 10, text_y - 10,
+                                               text_w + 20, text_h + 20), 1)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
-            elif event.type == pygame.KEYDOWN or \
-                    event.type == pygame.MOUSEBUTTONDOWN:
+            elif event.type == pygame.MOUSEBUTTONDOWN and text_x - 10 < event.pos[0] < text_x + 10 + text_w and text_y - 10 < event.pos[1] < text_y + 10 + text_h:
                 return  # начинаем игру
         pygame.display.flip()
         clock.tick(FPS)
-
-
-start_screen()
 
 
 def load_level(filename):
@@ -997,6 +1004,7 @@ weapon_lst = [CloseWeapon('sword', 'close_attack1', -50, -50, player, player_gro
                                                                speed=13,
                                                                rang=400, name='пистолет'), BombWeapon('bomb', 'bomb', -50, -50, player, player_group, 1.5, FPS)]
 
+start_screen()
 for map_name in ['map.txt', 'map1.txt']:
     is_portal_activated = False
     is_game_over = False
@@ -1101,22 +1109,22 @@ for map_name in ['map.txt', 'map1.txt']:
                 terminate()
             if event.type == pygame.KEYDOWN:  # назначаем движение
                 if event.key == pygame.K_w:  # вверх
-                    direction[1] -= 1
+                    direction[1] = -1
                 if event.key == pygame.K_d:  # вправо
                     direction[0] += 1
                 if event.key == pygame.K_s:  # вниз
-                    direction[1] += 1
+                    direction[1] = 1
                 if event.key == pygame.K_a:  # влево
-                    direction[0] -= 1
+                    direction[0] = -1
             if event.type == pygame.KEYUP:  # убираем движение по направлениям, если клавишу отпустили
                 if event.key == pygame.K_w:
-                    direction[1] += 1
+                    direction[1] = 0
                 if event.key == pygame.K_d:
-                    direction[0] -= 1
+                    direction[0] = 0
                 if event.key == pygame.K_s:
-                    direction[1] -= 1
+                    direction[1] = 0
                 if event.key == pygame.K_a:
-                    direction[0] += 1
+                    direction[0] = 0
         for i in range(len(weapon_lst)):
             weapon_lst[i].rect.x = inventory_slot_width * i
             weapon_lst[i].rect.y = HEIGHT - inventory_slot_width
