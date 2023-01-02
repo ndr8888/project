@@ -67,8 +67,9 @@ images = {
                                            (inventory_slot_width, inventory_slot_width)),
     'teleport': pygame.transform.scale(load_image('teleport.png'), (tile_width, tile_height)),
     'teleport1': pygame.transform.scale(load_image('teleport1.png'), (tile_width, tile_height)),
+    'teleport_win': pygame.transform.scale(load_image('teleport_win.png'), (tile_width, tile_height)),
     'key': pygame.transform.scale(load_image('key.png'), (tile_width, tile_height)),
-    'Jevel': pygame.transssform.scale(load_image('Jewel.png'), (tile_width, tile_height)),
+    'Jevel': pygame.transform.scale(load_image('Jewel.png'), (tile_width, tile_height)),
     'blast': load_image('blast.png'),
     'staff': load_image('staff.png'),
     'cross': load_image('cross.png'),
@@ -99,7 +100,7 @@ def start_screen():
         text_coords = [10, 50]
         font = pygame.font.Font(None, 25)
         for line in intro_text:
-            string_rendered = font.render(line, 1, pygame.Color('white'))
+            string_rendered = font.render(line, 1, pygame.Color('green'))
             intro_rect = string_rendered.get_rect()
             text_coords[1] += 10
             intro_rect.top = text_coords[1]
@@ -155,41 +156,111 @@ def start_screen():
 
 def end_screen():
     direction = [0, 0]
-    intro_text = ["ИГРА ОКОНЧЕНА"]
+    intro_text = ["ИГРА ОКОНЧЕНА",
+                  f"Время: {time_counter // 3600} мин {time_counter % 3600 // 60} сек"]
 
     # fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
     # screen.blit(fon, (0, 0))
 
     while True:
         screen.fill((0, 0, 0))
-        text_coords = [WIDTH // 2, HEIGHT // 2 - 150]
-        font = pygame.font.Font(None, 25)
+        text_coords = [10, 100]
+        font = pygame.font.Font(None, 30)
         for line in intro_text:
-            string_rendered = font.render(line, 1, pygame.Color('white'))
+            string_rendered = font.render(line, 1, pygame.Color('red'))
             intro_rect = string_rendered.get_rect()
             text_coords[1] += 10
             intro_rect.top = text_coords[1]
+            # intro_rect.x = text_coords[0] - intro_rect.w // 2
             intro_rect.x = text_coords[0]
             text_coords[1] += intro_rect.height
             screen.blit(string_rendered, intro_rect)
         font = pygame.font.Font(None, 50)
-        text = font.render("Начать заново", True, (100, 255, 100))
+        text = font.render("Начать заново", True, (255, 100, 100))
         text_x = WIDTH // 2 - text.get_width() // 2
         text_y = HEIGHT // 2 - text.get_height() // 2
         text_w = text.get_width()
         text_h = text.get_height()
         screen.blit(text, (text_x, text_y))
-        pygame.draw.rect(screen, (0, 255, 0), (text_x - 10, text_y - 10,
+        pygame.draw.rect(screen, (255, 0, 0), (text_x - 10, text_y - 10,
                                                text_w + 20, text_h + 20), 1)
 
         font = pygame.font.Font(None, 50)
-        text = font.render("Выйти из игры", True, (100, 255, 100))
+        text = font.render("Выйти из игры", True, (255, 100, 100))
         text_x2 = WIDTH // 2 - text.get_width() // 2
         text_y2 = HEIGHT // 2 - text.get_height() // 2 + 100
         text_w2 = text.get_width()
         text_h2 = text.get_height()
         screen.blit(text, (text_x2, text_y2))
-        pygame.draw.rect(screen, (0, 255, 0), (text_x2 - 10, text_y2 - 10,
+        pygame.draw.rect(screen, (255, 0, 0), (text_x2 - 10, text_y2 - 10,
+                                               text_w2 + 20, text_h2 + 20), 1)
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:  # назначаем движение
+                if event.key == pygame.K_w:  # вверх
+                    direction[1] -= 1
+                if event.key == pygame.K_d:  # вправо
+                    direction[0] += 1
+                if event.key == pygame.K_s:  # вниз
+                    direction[1] += 1
+                if event.key == pygame.K_a:  # влево
+                    direction[0] -= 1
+            if event.type == pygame.KEYUP:  # убираем движение по направлениям, если клавишу отпустили
+                if event.key == pygame.K_w:
+                    direction[1] += 1
+                if event.key == pygame.K_d:
+                    direction[0] -= 1
+                if event.key == pygame.K_s:
+                    direction[1] -= 1
+                if event.key == pygame.K_a:
+                    direction[0] += 1
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.MOUSEBUTTONDOWN and text_x - 10 < event.pos[0] < text_x + 10 + text_w and text_y - 10 < event.pos[1] < text_y + 10 + text_h:
+                return direction, 0
+            elif event.type == pygame.MOUSEBUTTONDOWN and text_x2 - 10 < event.pos[0] < text_x2 + 10 + text_w2 and text_y2 - 10 < event.pos[1] < text_y2 + 10 + text_h2:
+                return direction, 2
+        pygame.display.flip()
+        clock.tick(FPS)
+
+def win_screen():
+    direction = [0, 0]
+    intro_text = ["ИГРА ПРОЙДЕНА",
+                  f"Время: {time_counter // 3600} мин {time_counter % 3600 // 60} сек"]
+
+    # fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
+    # screen.blit(fon, (0, 0))
+
+    while True:
+        screen.fill((0, 0, 0))
+        text_coords = [10, 100]
+        font = pygame.font.Font(None, 30)
+        for line in intro_text:
+            string_rendered = font.render(line, 1, pygame.Color('yellow'))
+            intro_rect = string_rendered.get_rect()
+            text_coords[1] += 10
+            intro_rect.top = text_coords[1]
+            # intro_rect.x = text_coords[0] - intro_rect.w // 2
+            intro_rect.x = text_coords[0]
+            text_coords[1] += intro_rect.height
+            screen.blit(string_rendered, intro_rect)
+        font = pygame.font.Font(None, 50)
+        text = font.render("Пройти заново", True, (255, 255, 100))
+        text_x = WIDTH // 2 - text.get_width() // 2
+        text_y = HEIGHT // 2 - text.get_height() // 2
+        text_w = text.get_width()
+        text_h = text.get_height()
+        screen.blit(text, (text_x, text_y))
+        pygame.draw.rect(screen, (255, 255, 0), (text_x - 10, text_y - 10,
+                                               text_w + 20, text_h + 20), 1)
+
+        font = pygame.font.Font(None, 50)
+        text = font.render("Выйти из игры", True, (255, 255, 100))
+        text_x2 = WIDTH // 2 - text.get_width() // 2
+        text_y2 = HEIGHT // 2 - text.get_height() // 2 + 100
+        text_w2 = text.get_width()
+        text_h2 = text.get_height()
+        screen.blit(text, (text_x2, text_y2))
+        pygame.draw.rect(screen, (255, 255, 0), (text_x2 - 10, text_y2 - 10,
                                                text_w2 + 20, text_h2 + 20), 1)
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:  # назначаем движение
@@ -232,7 +303,7 @@ def pause_screen():
         text_coords = [WIDTH // 2, HEIGHT // 2 - 150]
         font = pygame.font.Font(None, 50)
         for line in intro_text:
-            string_rendered = font.render(line, 1, pygame.Color('white'))
+            string_rendered = font.render(line, 1, pygame.Color('green'))
             intro_rect = string_rendered.get_rect()
             text_coords[1] += 10
             intro_rect.top = text_coords[1]
@@ -348,6 +419,24 @@ class Teleport(BackgroundTile):
         if player.pos_x == self.pos_x and player.pos_y == self.pos_y and is_portal_activated:
             global level_running
             level_running = False
+
+    def type(self):
+        return 'empty'
+
+class WinTeleport(BackgroundTile):
+    def __init__(self, pos_x, pos_y):
+        super().__init__(pos_x, pos_y)
+        self.image = images['teleport1']
+        self.pos_x, self.pos_y = pos_x, pos_y
+
+    def update(self):
+        if is_portal_activated:
+            self.image = images['teleport_win']
+        if player.pos_x == self.pos_x and player.pos_y == self.pos_y and is_portal_activated:
+            global level_running, game_running, is_won
+            level_running = False
+            game_running = False
+            is_won = True
 
     def type(self):
         return 'empty'
@@ -514,7 +603,7 @@ class Player(pygame.sprite.Sprite):
 
 
 class Monster(pygame.sprite.Sprite):
-    def __init__(self, pos_x, pos_y, weapon, hp_max, rang_min, rang_max, image_name, close_mode, speed, dop_groups=[]):
+    def __init__(self, pos_x, pos_y, weapon, hp_max, rang_min, rang_max, image_name, close_mode, speed, dop_groups=[], clever_shoot=False):
         # self.weapon = CloseWeapon('empty_image', 'close_attack', -50, -50, self, monster_group, 1, FPS // 2,
         #                           rang=2.25)  # изменяемый
         weapon.owner = self
@@ -541,14 +630,15 @@ class Monster(pygame.sprite.Sprite):
         self.state = False
         self.player_coords_old = player.pos_x, player.pos_y
         self.coords_old = self.pos_x, self.pos_y
+        self.clever_shoot = clever_shoot
 
     def type(self):
         return 'monster'
 
     def update(self):
-        if not self.close_mode and (player.timer_x.time != 0 or player.timer_y.time != 0):
+        if not self.close_mode and (player.timer_x.time != 0 or player.timer_y.time != 0) and self.clever_shoot:
             if abs(self.pos_x - player.pos_x) <= self.rang_max and abs(self.pos_y - player.pos_y) <= self.rang_max:
-                self.weapon.use(player.rect.x + player.x_move * tile_width + tile_width * 0.55, player.rect.y + player.y_move * tile_height + tile_width * 0.55)
+                self.weapon.use(player.rect.x + player.x_move * tile_width + tile_width * 0.5, player.rect.y + player.y_move * tile_height + tile_width * 0.5)
         else:
             if abs(self.pos_x - player.pos_x) <= self.rang_min and abs(self.pos_y - player.pos_y) <= self.rang_min:
                 self.weapon.use(player.rect.x + tile_width * 0.5, player.rect.y + tile_width * 0.5)
@@ -873,6 +963,9 @@ def generate_level(level):
             elif level[y][x] == 'T':
                 BackgroundTile(x, y)
                 table[x].append(Teleport(x, y))
+            elif level[y][x] == 'W':
+                BackgroundTile(x, y)
+                table[x].append(WinTeleport(x, y))
             elif level[y][x] == 'K':
                 BackgroundTile(x, y)
                 table[x].append(Key(x, y))
@@ -900,7 +993,7 @@ def generate_level(level):
                 table[x].append(
                     Monster(x, y, BulletWeapon('empty_image', 'bullet', -50, -50, None, monster_group, 1, FPS, speed=15,
                                                rang=450), 15, 9, 9, 'monster2', False, 30,
-                            dop_groups=[guard_monster_group]))
+                            dop_groups=[guard_monster_group], clever_shoot=True))
             elif level[y][x] == '4':  # монстер обозначается цифрой 1, при добавлнии новых монстров будет 2, 3 и тд
                 BackgroundTile(x, y)
                 table[x].append(Monster(x, y,
@@ -1161,6 +1254,8 @@ while True:
     static_sprites = pygame.sprite.Group()
     weapon_group = pygame.sprite.Group()
     player = Player(0, 0)
+    time_counter = 0
+    is_won = False
     weapon_lst = [CloseWeapon('sword', 'close_attack1', -50, -50, player, player_group, 2, FPS // 2,
                               rang=4.25, name='меч'), BulletWeapon('gun', 'bullet', -50, -50,
                                                                    player,
@@ -1195,6 +1290,7 @@ while True:
         font_for_inventory = pygame.font.Font(None, 20)
         pause_btn = StaticSprite(WIDTH - inventory_slot_width, HEIGHT - inventory_slot_width, 'pause')
         while level_running:
+            time_counter += 1
             # изменяем ракурс камеры
             # внутри игрового цикла ещё один цикл
             # приёма и обработки сообщений
@@ -1350,3 +1446,13 @@ while True:
                     terminate()
         if game_running == False:
             break
+    if is_won:
+        direction_new, state = win_screen()
+        direction[0] += direction_new[0]
+        direction[1] += direction_new[1]
+        if state == 0:
+            is_start = True
+            level_running = False
+            game_running = False
+        elif state == 2:
+            terminate()
