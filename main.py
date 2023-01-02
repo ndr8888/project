@@ -524,9 +524,9 @@ class Jewel(BackgroundTile):  # класс сокровищ
 class HealPotion(BackgroundTile):
     def __init__(self, pos_x, pos_y):
         super().__init__(pos_x, pos_y)
+        potion_group.add(self)
         self.image = pygame.transform.scale(images['health_potion'], (tile_width, tile_height))  # изображение сокровища
         self.pos_x, self.pos_y = pos_x, pos_y  # координаты
-        self.rand_potion = ''
 
     def update(self):
         if player.pos_x == self.pos_x and player.pos_y == self.pos_y:  # проверяю координаты перса и сокровища
@@ -539,9 +539,9 @@ class HealPotion(BackgroundTile):
 class RagePotion(BackgroundTile):
     def __init__(self, pos_x, pos_y):
         super().__init__(pos_x, pos_y)
+        potion_group.add(self)
         self.image = pygame.transform.scale(images['rage_potion'], (tile_width, tile_height))  # изображение сокровища
         self.pos_x, self.pos_y = pos_x, pos_y  # координаты
-        self.rand_potion = ''
 
     def update(self):
         if player.pos_x == self.pos_x and player.pos_y == self.pos_y:  # проверяю координаты перса и сокровища
@@ -556,7 +556,6 @@ class ArmorPotion(BackgroundTile):
         super().__init__(pos_x, pos_y)
         self.image = pygame.transform.scale(images['shield_potion'], (tile_width, tile_height))  # изображение сокровища
         self.pos_x, self.pos_y = pos_x, pos_y  # координаты
-        self.rand_potion = ''
 
     def update(self):
         if player.pos_x == self.pos_x and player.pos_y == self.pos_y:  # проверяю координаты перса и сокровища
@@ -784,6 +783,13 @@ class Monster(pygame.sprite.Sprite):
         if self.hp <= 0:
             board[self.next_cell[0]][self.next_cell[1]] = Empty()
             board[self.pos_x][self.pos_y] = Empty()
+            # if True or random.random() > 0.1:
+            #     if random.random() > 0.5:
+            #         a = HealPotion(self.pos_x, self.pos_y)
+            #         print(self.pos_x, self.pos_y, a.rect.x, a.rect.y)
+            #     else:
+            #         a = RagePotion(self.pos_x, self.pos_y)
+            #         print(self.pos_x, self.pos_y, a.rect.x, a.rect.y)
             self.kill()
 
 
@@ -1061,6 +1067,7 @@ def generate_level(level):
                 table[x].append(HealPotion(x, y))
             elif level[y][x] == 'R':  # сокровище
                 BackgroundTile(x, y)
+                print(x, y)
                 table[x].append(RagePotion(x, y))
             elif level[y][x] == 'A':  # сокровище
                 BackgroundTile(x, y)
@@ -1231,10 +1238,8 @@ class Inventory:  # класс иневентаря. В игре он снизу
 
         StaticSprite(inventory_slot_width * 5 + 10, HEIGHT - inventory_slot_width, 'inventory_slot')
         StaticSprite(inventory_slot_width * 6 + 10, HEIGHT - inventory_slot_width, 'inventory_slot')
-        StaticSprite(inventory_slot_width * 7 + 10, HEIGHT - inventory_slot_width, 'inventory_slot')
         self.hp_potion_sprite = StaticSprite(inventory_slot_width * 5 + 10, HEIGHT - inventory_slot_width, 'empty_image')
         self.rage_potion_sprite = StaticSprite(inventory_slot_width * 6 + 10, HEIGHT - inventory_slot_width, 'empty_image')
-        self.armor_potion_sprite = StaticSprite(inventory_slot_width * 7 + 10, HEIGHT - inventory_slot_width, 'empty_image')
         self.weapon_frame = StaticSprite(0, HEIGHT - inventory_slot_width, 'frame')
 
     def use_weapon(self):
@@ -1246,9 +1251,6 @@ class Inventory:  # класс иневентаря. В игре он снизу
 
     def plus_rage_potion(self):  # +1 зелье, которое увеличивает урон в 2 раза на 10 сек
         self.rage_potion += 1
-
-    def plus_armor_potion(self):  # +1 зелье, которое уменьшает получаемый урон до 0 на 5 сек
-        self.armor_potion += 1
 
     def hp_plus(self):
         if self.hp_potions:  # если есть зелье хп
@@ -1262,14 +1264,8 @@ class Inventory:  # класс иневентаря. В игре он снизу
     def plus_damage(self):
         if self.rage_potion and self.rage_timer.time == 0:  # если есть зелье ярости и оно неактивно
             self.rage_potion -= 1  # поглощаем 1 зелье
-            self.rage_timer = Timer(600)  # заводим таймер на 10 сек (60 тиков в секунду)
+            self.rage_timer = Timer(FPS * 5)  # заводим таймер на 10 сек (60 тиков в секунду)
             self.rage_timer.start()  # начинаем отсчёт
-
-    def plus_armor(self):
-        if self.armor_potion and self.armor_timer.time == 0:  # если есть зелье неуязвимости и оно неактивно
-            self.armor_potion -= 1  # поглощаем 1 зелье
-            self.armor_timer = Timer(300)  # заводим таймер на 5 сек (60 тиков в секунду)
-            self.armor_timer.start()  # начинаем отсчёт
 
     def quantity_rendering(self):  # отображение всего инвентаря
         if self.hp_potions != 0:
@@ -1280,10 +1276,6 @@ class Inventory:  # класс иневентаря. В игре он снизу
             self.rage_potion_sprite.image = images['rage_potion']
         else:
             self.rage_potion_sprite.image = images['empty_image']
-        if self.armor_potion != 0:
-            self.armor_potion_sprite.image = images['shield_potion']
-        else:
-            self.armor_potion_sprite.image = images['empty_image']
         inventar_group.update()  # обновляем положение инвентаря
         inventar_group.draw(screen)  # выводим инвентарь на экран
         weapon_group.draw(screen)
@@ -1291,9 +1283,6 @@ class Inventory:  # класс иневентаря. В игре он снизу
         screen.blit(text, (inventory_slot_width * 6 + 5, HEIGHT - 10))  # выводим кол-во зелий хп около зелья хп
         text = font_for_inventory.render(f"{inventory.rage_potion}", True, (255, 0, 0))  # кол-во зелий ярости
         screen.blit(text, (inventory_slot_width * 7 + 5, HEIGHT - 10))  # выводим кол-во зелий ярости около зелья ярости
-        text = font_for_inventory.render(f"{inventory.armor_potion}", True, (255, 0, 0))  # кол-во зелий неуязвимости
-        screen.blit(text, (
-            inventory_slot_width * 8 + 5, HEIGHT - 10))  # выводим кол-во зелий неуязвимости около зелья неуязвимости
 
         text = font_for_inventory.render(f"{1}", True, (0, 255, 0))  # зелье хп активируется при нажатии на 1
         screen.blit(text, (
@@ -1317,12 +1306,8 @@ class Inventory:  # класс иневентаря. В игре он снизу
         text = font_for_inventory.render(f"Q", True, (0, 255, 0))  # зелье хп активируется при нажатии на 1
         screen.blit(text, (
             inventory_slot_width * 7 + 2, HEIGHT - inventory_slot_width - 14))  # выводим зеленым шрифтом цифру 1
-        text = font_for_inventory.render(f"{8}", True, (0, 255, 0))  # зелье хп активируется при нажатии на 1
-        screen.blit(text, (
-            inventory_slot_width * 8 + 2, HEIGHT - inventory_slot_width - 14))  # выводим зеленым шрифтом цифру 1
 
         inventory.rage_timer.tick()  # если зелье активно, то уменьшаем время действия до 0. Иначе 0
-        inventory.armor_timer.tick()  # если зелье активно, то уменьшаем время действия до 0. Иначе 0
 
 
 def draw_hp(entity):
@@ -1355,6 +1340,7 @@ while True:
     weapon_lst = [CloseWeapon('sword', 'close_attack1', -50, -50, player, player_group, 2, FPS // 2,
                                               rang=4, name='меч')]
     for map_num, map_name in enumerate(['map.txt', 'map1.txt']):
+        potion_group = pygame.sprite.Group()
         is_portal_activated = False
         tiles_group = pygame.sprite.Group()
         wall_group = pygame.sprite.Group()
@@ -1457,8 +1443,6 @@ while True:
                         inventory.current_slot = 0
                         inventory.weapon_frame.rect.x = 0
 
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_8:  # активирует зелье неуязвимости
-                    inventory.plus_armor()
                 if event.type == pygame.QUIT:
                     terminate()
                 if event.type == pygame.KEYDOWN:  # назначаем движение
@@ -1500,7 +1484,11 @@ while True:
             screen.fill((255, 255, 255))
             tiles_group.draw(
                 screen)  # спрайты клеток и сущности рисуются отдельно, чтобы спрайты клеток не наслаивались на сущностей
+            potion_group.draw(screen)
             entity_group.draw(screen)
+            if inventory.rage_timer.time != 0:
+                pygame.draw.rect(screen, (255, 0, 255), (player.rect.x, player.rect.y,
+                                                       tile_width, tile_height), 3)
             attack_group.draw(screen)
             for i in entity_group:  # всем сущностям и герою выводим полоску хп
                 draw_hp(i)
