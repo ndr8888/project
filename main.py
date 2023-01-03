@@ -764,10 +764,11 @@ class Monster(pygame.sprite.Sprite):
                 self.y_move = 0
 
     def damage(self, n):
-        if inventory.rage_timer.time:  # если действует зелье увеличения урона
-            self.hp -= n * 2  # то урон х2
-        else:
-            self.hp -= n * 1
+        # if inventory.rage_timer.time:  # если действует зелье увеличения урона
+        #     self.hp -= n * 2  # то урон х2
+        # else:
+        #     self.hp -= n * 1
+        self.hp -= n
         if self.hp <= 0:
             board[self.next_cell[0]][self.next_cell[1]] = Empty()
             board[self.pos_x][self.pos_y] = Empty()
@@ -827,7 +828,7 @@ class CloseAttack(pygame.sprite.Sprite):
         self.rect.x, self.rect.y = x - self.rect.w // 2, y - self.rect.h // 2
         self.damaged_lst = list()
         self.mask = pygame.mask.from_surface(self.image)
-        self.timer = Timer(FPS // 4)
+        self.timer = Timer(FPS // 5)
         self.timer.start()
         self.fraction = fraction
         self.dmg = damage
@@ -941,6 +942,8 @@ class Weapon(pygame.sprite.Sprite):
 
     def update(self):
         self.timer.tick()
+        if self.owner == player and inventory.rage_timer.time != 0:
+            self.timer.tick()
 
     # def use(self):
     #     if int(self.timer) == 0:
@@ -1057,9 +1060,6 @@ def generate_level(level):
                 BackgroundTile(x, y)
                 print(x, y)
                 table[x].append(RagePotion(x, y))
-            elif level[y][x] == 'A':  # сокровище
-                BackgroundTile(x, y)
-                table[x].append(ArmorPotion(x, y))
             elif level[y][x] == '1':  # монстер обозначается цифрой 1, при добавлнии новых монстров будет 2, 3 и тд
                 BackgroundTile(x, y)
                 table[x].append(
