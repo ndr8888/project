@@ -530,7 +530,8 @@ class HealPotion(BackgroundTile):
 
     def update(self):
         if player.pos_x == self.pos_x and player.pos_y == self.pos_y:  # проверяю координаты перса и сокровища
-            inventory.hp_potions += 1
+            global hp_potions, rage_potions
+            hp_potions += 1
             self.kill()
 
     def type(self):
@@ -545,21 +546,8 @@ class RagePotion(BackgroundTile):
 
     def update(self):
         if player.pos_x == self.pos_x and player.pos_y == self.pos_y:  # проверяю координаты перса и сокровища
-            inventory.rage_potion += 1
-            self.kill()
-
-    def type(self):
-        return 'empty'
-
-class ArmorPotion(BackgroundTile):
-    def __init__(self, pos_x, pos_y):
-        super().__init__(pos_x, pos_y)
-        self.image = pygame.transform.scale(images['shield_potion'], (tile_width, tile_height))  # изображение сокровища
-        self.pos_x, self.pos_y = pos_x, pos_y  # координаты
-
-    def update(self):
-        if player.pos_x == self.pos_x and player.pos_y == self.pos_y:  # проверяю координаты перса и сокровища
-            inventory.armor_potion += 1
+            global hp_potions, rage_potions
+            rage_potions += 1
             self.kill()
 
     def type(self):
@@ -1224,10 +1212,6 @@ class Inventory:  # класс иневентаря. В игре он снизу
 
     def __init__(self):
         self.current_slot = 0
-        self.hp_potions = 0  # кол-во зелий, которые лечат 5хп
-        self.rage_potion = 0  # кол-во зелий, которые увеличивают урон в 2 раза на 10 сек
-        self.armor_potion = 0  # кол-во зелий, которые уменьшают получаемый урон до 0 на 5 сек
-        self.speed_potion = 0  # кол-во зелий, которые увеличивают скорость в 2 раза
         self.armor_timer = Timer(0)  # таймер для зелий неуязвимости
         self.rage_timer = Timer(0)  # таймер для зелий увелмчения урона
         StaticSprite(0, HEIGHT - inventory_slot_width, 'inventory_slot')
@@ -1247,41 +1231,45 @@ class Inventory:  # класс иневентаря. В игре он снизу
             weapon_lst[self.current_slot].use(*pos)
 
     def plus_hp_potion(self):  # +1 зелье, которое лечит 5хп
-        self.hp_potions += 1
+        global hp_potions, rage_potions
+        hp_potions += 1
 
     def plus_rage_potion(self):  # +1 зелье, которое увеличивает урон в 2 раза на 10 сек
-        self.rage_potion += 1
+        global hp_potions, rage_potions
+        rage_potions += 1
 
     def hp_plus(self):
-        if self.hp_potions:  # если есть зелье хп
+        global hp_potions, rage_potions
+        if hp_potions:  # если есть зелье хп
             if player.hp + 5 <= player.hp_max:  # добавляем 5хп, если не привысим максимальное кол-во хп
                 player.hp += 5  # +5 хп
-                self.hp_potions -= 1  # -1 зелье, которое лечит 5 хп
+                hp_potions -= 1  # -1 зелье, которое лечит 5 хп
             elif player.hp < player.hp_max:  # если +5 превысит максимальное кол-во хп, то добавляем до максимального
                 player.hp = player.hp_max  # теперь хп = максимальные хп
-                self.hp_potions -= 1  # -1 зелье, которое лечит 5 хп
+                hp_potions -= 1  # -1 зелье, которое лечит 5 хп
 
     def plus_damage(self):
-        if self.rage_potion and self.rage_timer.time == 0:  # если есть зелье ярости и оно неактивно
-            self.rage_potion -= 1  # поглощаем 1 зелье
+        global hp_potions, rage_potions
+        if rage_potions and self.rage_timer.time == 0:  # если есть зелье ярости и оно неактивно
+            rage_potions -= 1  # поглощаем 1 зелье
             self.rage_timer = Timer(FPS * 5)  # заводим таймер на 10 сек (60 тиков в секунду)
             self.rage_timer.start()  # начинаем отсчёт
 
     def quantity_rendering(self):  # отображение всего инвентаря
-        if self.hp_potions != 0:
+        if hp_potions != 0:
             self.hp_potion_sprite.image = images['health_potion']
         else:
             self.hp_potion_sprite.image = images['empty_image']
-        if self.rage_potion != 0:
+        if rage_potions != 0:
             self.rage_potion_sprite.image = images['rage_potion']
         else:
             self.rage_potion_sprite.image = images['empty_image']
         inventar_group.update()  # обновляем положение инвентаря
         inventar_group.draw(screen)  # выводим инвентарь на экран
         weapon_group.draw(screen)
-        text = font_for_inventory.render(f"{inventory.hp_potions}", True, (255, 0, 0))  # кол-во зелий hp
+        text = font_for_inventory.render(f"{hp_potions}", True, (255, 0, 0))  # кол-во зелий hp
         screen.blit(text, (inventory_slot_width * 6 + 5, HEIGHT - 10))  # выводим кол-во зелий хп около зелья хп
-        text = font_for_inventory.render(f"{inventory.rage_potion}", True, (255, 0, 0))  # кол-во зелий ярости
+        text = font_for_inventory.render(f"{rage_potions}", True, (255, 0, 0))  # кол-во зелий ярости
         screen.blit(text, (inventory_slot_width * 7 + 5, HEIGHT - 10))  # выводим кол-во зелий ярости около зелья ярости
 
         text = font_for_inventory.render(f"{1}", True, (0, 255, 0))  # зелье хп активируется при нажатии на 1
@@ -1321,6 +1309,8 @@ def draw_hp(entity):
 
 
 direction, state = start_screen()
+hp_potions = 0
+rage_potions = 0
 if state == 2:
     terminate()
 is_start = True
