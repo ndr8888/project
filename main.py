@@ -1118,32 +1118,25 @@ class Camera:
         self.dx_total += self.dx
         self.dy_total += self.dy
 
-# counter = 0
-def is_linear_path(x1, y1, x2, y2, owner=None, fraction=None, target=None, go_through_entities=False, field=1):
-    # return True
 
-    # global counter
-    # print(counter, owner, field == 1)
-    # counter += 1
+def is_linear_path(x1, y1, x2, y2, owner=None, fraction=None, target=None, go_through_entities=False, field=1):
     a = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
     vector = ((x2 - x1) / a, (y2 - y1) / a)
-    # field = 1
     cond = field == 1
     cond1 = (vector[0] >= 0) == (vector[1] >= 0)
     field //= 2
     while abs(int(x1) - int(x2)) > 3 or abs(int(y1) - int(y2)) > 3:
         for i in wall_group:
-            if i != owner and i != target and i not in fraction:
-                if cond:
-                    if i.rect.collidepoint(x1, y1):
+            if cond:
+                if i.rect.collidepoint(x1, y1):
+                    return False
+            else:
+                if cond1:
+                    if (i.rect.collidepoint(x1 + field, y1 - field) or i.rect.collidepoint(x1 - field, y1 + field)):
                         return False
                 else:
-                    if cond1:
-                        if (i.rect.collidepoint(x1 + field, y1 - field) or i.rect.collidepoint(x1 - field, y1 + field)):
-                            return False
-                    else:
-                        if (i.rect.collidepoint(x1 - field, y1 - field) or i.rect.collidepoint(x1 + field, y1 + field)):
-                            return False
+                    if (i.rect.collidepoint(x1 - field, y1 - field) or i.rect.collidepoint(x1 + field, y1 + field)):
+                        return False
         # if not go_through_entities:
         #     for i in entity_group:
         #         if field == 1:
