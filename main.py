@@ -532,12 +532,13 @@ class Jewel(BackgroundTile):  # класс сокровищ
                                                rang=400, name='пистолет'))
             if map_num == 1:
                 weapon_lst.append(MagicWeapon('staff', 'blast', -50, -50, player, player_group, 1.5, FPS,
-                              area_width=1.25, name='меч', rang=300))
+                                              area_width=1.25, name='меч', rang=300))
             if map_num == 2:
                 weapon_lst.append(CloseWeapon('spear', 'close_attack', -50, -50, player, player_group, 3, FPS,
-                              rang=4.5, name='копьё'))
+                                              rang=4.5, name='копьё'))
             if map_num == 3:
-                weapon_lst.append(BombWeapon('bomb_launcher', 'bomb', -50, -50, player, player_group, 1.5, FPS, speed=12, rang=300))
+                weapon_lst.append(
+                    BombWeapon('bomb_launcher', 'bomb', -50, -50, player, player_group, 1.5, FPS, speed=12, rang=300))
             # weapon_lst.append(MagicWeapon('staff', 'blast', -50, -50, player, player_group, 1, FPS,
             #                               area_width=1, name='меч'))
             # добавляем зельку в инвентарь
@@ -547,6 +548,7 @@ class Jewel(BackgroundTile):  # класс сокровищ
 
     def type(self):
         return 'empty'
+
 
 class HealPotion(BackgroundTile):
     def __init__(self, pos_x, pos_y):
@@ -563,6 +565,7 @@ class HealPotion(BackgroundTile):
 
     def type(self):
         return 'empty'
+
 
 class RagePotion(BackgroundTile):
     def __init__(self, pos_x, pos_y):
@@ -720,9 +723,9 @@ class Monster(pygame.sprite.Sprite):
         self.x, self.y = self.rect.topleft
         self.state = False
         self.state_new = False
-        self.player_coords_old = player.pos_x, player.pos_y # место, где был персонаж до анимации его движения
+        self.player_coords_old = player.pos_x, player.pos_y  # место, где был персонаж до анимации его движения
         self.coords_old = self.pos_x, self.pos_y
-        self.clever_shoot = clever_shoot # донаводка
+        self.clever_shoot = clever_shoot  # донаводка
         self.path = None
 
     def type(self):
@@ -739,12 +742,17 @@ class Monster(pygame.sprite.Sprite):
                 return None
             next_cell = self.path[1]
             cond = board[self.pos_x - (next_cell[0] - self.pos_x)][
-                    self.pos_y - (next_cell[1] - self.pos_y)].type() == 'empty' and not (abs(
-                    self.pos_x - player.pos_x) == self.rang_min - 1 or abs(
-                    self.pos_y - player.pos_y) == self.rang_min - 1)
-            if self.player_coords_old != (player.pos_x, player.pos_y) or self.coords_old != (self.pos_x, self.pos_y):
+                       self.pos_y - (next_cell[1] - self.pos_y)].type() == 'empty' and not (abs(
+                self.pos_x - player.pos_x) == self.rang_min - 1 or abs(
+                self.pos_y - player.pos_y) == self.rang_min - 1)
+            if (self.player_coords_old != (player.pos_x, player.pos_y) or self.coords_old != (self.pos_x, self.pos_y)) and not (self.rang_min <= abs(
+                    self.pos_x - player.pos_x) <= self.rang_max and self.rang_min <= abs(
+                self.pos_y - player.pos_y) <= self.rang_max):
+                print(1)
                 self.state_new = is_linear_path(*self.rect.center, *player.rect.center, owner=self, target=player,
-                                            fraction=monster_group, field=self.weapon.bullet_size[0] if type(self.weapon) in (BulletWeapon, BombWeapon) else 3, go_through_entities=True)
+                                                fraction=monster_group,
+                                                field=self.weapon.bullet_size[0] if type(self.weapon) in (
+                                                BulletWeapon, BombWeapon) else 3, go_through_entities=True)
                 self.coords_old = self.pos_x, self.pos_y
             elif not (not self.state and self.state_new and cond):
                 self.state_new = self.state
@@ -758,7 +766,7 @@ class Monster(pygame.sprite.Sprite):
                     x_move, y_move = self.next_cell[0] - self.pos_x, self.next_cell[1] - self.pos_y
                 elif cond and self.state:
                     self.next_cell = [self.pos_x - (next_cell[0] - self.pos_x),
-                                        self.pos_y - (next_cell[1] - self.pos_y)]
+                                      self.pos_y - (next_cell[1] - self.pos_y)]
                     x_move, y_move = -(next_cell[0] - self.pos_x), -(next_cell[1] - self.pos_y)
                 # elif (abs(self.pos_x - player.pos_x) == self.rang_min - 1 or abs(self.pos_y - player.pos_y) == self.rang_min - 1) and board[self.pos_x + (next_cell[1] - self.pos_y)][self.pos_y + (next_cell[0] - self.pos_x)].type() == 'empty':
                 #     x_move, y_move = next_cell[1] - self.pos_y, next_cell[0] - self.pos_x
@@ -774,7 +782,8 @@ class Monster(pygame.sprite.Sprite):
                     self.y_move = y_move
                     self.timer_y.start()
                     board[self.pos_x][self.pos_y + y_move] = Blocked()
-            if not (not self.state and self.state_new and cond) or self.player_coords_old != (player.pos_x, player.pos_y):
+            if not (not self.state and self.state_new and cond) or self.player_coords_old != (
+            player.pos_x, player.pos_y):
                 self.player_coords_old = player.pos_x, player.pos_y
                 self.state = self.state_new
 
@@ -804,7 +813,8 @@ class Monster(pygame.sprite.Sprite):
                                 player.rect.y + player.y_move * tile_height + tile_width * 0.5)
             else:
                 self.weapon.use(player.rect.x + tile_width * 0.5, player.rect.y + tile_width * 0.5)
-    def damage(self, n): # функция получения урона, не нанесения
+
+    def damage(self, n):  # функция получения урона, не нанесения
         # if inventory.rage_timer.time:  # если действует зелье увеличения урона
         #     self.hp -= n * 2  # то урон х2
         # else:
@@ -884,12 +894,14 @@ class CloseAttack(pygame.sprite.Sprite):  # ближняя атака
             if pygame.sprite.collide_mask(self, i) and i not in self.fraction and i not in self.damaged_lst:
                 n = len(list(filter(lambda x: x, [
                     is_linear_path(*self.owner.rect.center, *i.rect.topleft, owner=self.owner, target=i,
-                                   fraction=self.fraction, go_through_entities=True), is_linear_path(*self.owner.rect.center, *i.rect.topright,
-                                                                           owner=self.owner, target=i,
-                                                                           fraction=self.fraction, go_through_entities=True), is_linear_path(
+                                   fraction=self.fraction, go_through_entities=True),
+                    is_linear_path(*self.owner.rect.center, *i.rect.topright,
+                                   owner=self.owner, target=i,
+                                   fraction=self.fraction, go_through_entities=True), is_linear_path(
                         *self.owner.rect.center, *i.rect.bottomleft, owner=self.owner, target=i,
-                        fraction=self.fraction, go_through_entities=True), is_linear_path(*self.owner.rect.center, *i.rect.bottomright,
-                                                                owner=self.owner, target=i, fraction=self.fraction, go_through_entities=True)])))
+                        fraction=self.fraction, go_through_entities=True),
+                    is_linear_path(*self.owner.rect.center, *i.rect.bottomright,
+                                   owner=self.owner, target=i, fraction=self.fraction, go_through_entities=True)])))
                 if n > 0:
                     string = str((self.dmg / 4) * n)
                     i.damage(float(string[:string.find('.') + 2]))
@@ -1087,8 +1099,8 @@ def generate_level(level):
             elif level[y][x] == 'W':  # телепорт при прохождении всей игры
                 BackgroundTile(x, y)
                 table[x].append(WinTeleport(x, y))
-            elif level[y][x] == 'K': # ключ, чтобы открылся телепорт на следующий уровень
-                global  is_key
+            elif level[y][x] == 'K':  # ключ, чтобы открылся телепорт на следующий уровень
+                global is_key
                 is_key = True
                 BackgroundTile(x, y)
                 table[x].append(Key(x, y))
@@ -1110,12 +1122,14 @@ def generate_level(level):
             elif level[y][x] == 'S':  # ловушка
                 BackgroundTile(x, y)
                 table[x].append(Snare(x, y))
-            elif level[y][x] == '1': # монстр ближнего боя
+            elif level[y][x] == '1':  # монстр ближнего боя
                 BackgroundTile(x, y)
                 table[x].append(
-                    Monster(x, y, CloseWeapon('empty_image', 'close_attack1', -50, -50, None, monster_group, 1, FPS // 2,
-                                          rang=3), 10, 2, 7, 'monster', True, 10, dop_groups=[] if map_num != 0 else [guard_monster_group]))
-            elif level[y][x] == '2': # монстр дальнего боя
+                    Monster(x, y,
+                            CloseWeapon('empty_image', 'close_attack1', -50, -50, None, monster_group, 1, FPS // 2,
+                                        rang=3), 10, 2, 7, 'monster', True, 10,
+                            dop_groups=[] if map_num != 0 else [guard_monster_group]))
+            elif level[y][x] == '2':  # монстр дальнего боя
                 BackgroundTile(x, y)
                 table[x].append(Monster(x, y,
                                         BulletWeapon('empty_image', 'bullet', -50, -50, None, monster_group, 1, FPS,
@@ -1298,8 +1312,10 @@ class Inventory:  # класс иневентаря. В игре он снизу
 
         StaticSprite(inventory_slot_width * 5 + 10, HEIGHT - inventory_slot_width, 'inventory_slot')
         StaticSprite(inventory_slot_width * 6 + 10, HEIGHT - inventory_slot_width, 'inventory_slot')
-        self.hp_potion_sprite = StaticSprite(inventory_slot_width * 5 + 10, HEIGHT - inventory_slot_width, 'empty_image')
-        self.rage_potion_sprite = StaticSprite(inventory_slot_width * 6 + 10, HEIGHT - inventory_slot_width, 'empty_image')
+        self.hp_potion_sprite = StaticSprite(inventory_slot_width * 5 + 10, HEIGHT - inventory_slot_width,
+                                             'empty_image')
+        self.rage_potion_sprite = StaticSprite(inventory_slot_width * 6 + 10, HEIGHT - inventory_slot_width,
+                                               'empty_image')
         self.weapon_frame = StaticSprite(0, HEIGHT - inventory_slot_width, 'frame')
 
     def use_weapon(self):
@@ -1384,7 +1400,7 @@ def draw_hp(entity):
     screen.blit(text, (entity.rect.x, entity.rect.y - text.get_height() - 20))
 
 
-direction, state = start_screen()# стартовое окно
+direction, state = start_screen()  # стартовое окно
 fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
 if state == 2:  # 2я кнопка = выход из игры
     terminate()
@@ -1405,7 +1421,7 @@ while True:
     time_counter = 0
     is_won = False
     weapon_lst = [CloseWeapon('sword', 'close_attack1', -50, -50, player, player_group, 2, FPS // 2,
-                                              rang=4, name='меч')]
+                              rang=4, name='меч')]
     for map_num, map_name in enumerate(['map.txt', 'map1.txt', 'map2.txt']):
         is_key = False
         potion_group = pygame.sprite.Group()
@@ -1564,7 +1580,7 @@ while True:
             entity_group.draw(screen)
             if inventory.rage_timer.time != 0:
                 pygame.draw.rect(screen, (255, 0, 255), (player.rect.x, player.rect.y,
-                                                       tile_width, tile_height), 3)
+                                                         tile_width, tile_height), 3)
             attack_group.draw(screen)
             for i in entity_group:  # всем сущностям и герою выводим полоску хп
                 draw_hp(i)
