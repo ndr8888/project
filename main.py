@@ -8,7 +8,7 @@ clock = pygame.time.Clock()
 pygame.init()
 size = WIDTH, HEIGHT = 750, 750  # размеры окна
 screen = pygame.display.set_mode(size)
-tile_width = tile_height = 50  # размеры кнопок
+tile_width = tile_height = 50  # размеры кнопокa
 inventory_slot_width = 60  # размеры слотов инвентаря
 
 
@@ -42,10 +42,10 @@ def load_image(name, colorkey=None):  # функция для загрузки �
 # словарь с изображениями
 images = {
     'wall': pygame.transform.scale(load_image('box.png'), (tile_width, tile_height)),  # стена
-    'empty': pygame.transform.scale(load_image('grass.png'), (tile_width, tile_height)),  # зеленый фон, трава
+    'grass': pygame.transform.scale(load_image('grass.png'), (tile_width, tile_height)),  # зеленый фон, трава
     'bullet': load_image('bullet.png'),  # пуля
-    'close_attack': load_image('attack.png'),  # ближняя атака монстра
-    'close_attack1': load_image('attack1.png'),  # ближняя атака главного героя
+    'close_attack': load_image('attack2.png'),  # ближняя атака монстра
+    'close_attack1': load_image('attack3.png'),  # ближняя атака главного героя
     'empty_image': load_image('empty_image.png'),  # черная пустота
     'monster': pygame.transform.scale(load_image('enemy.png'), (tile_width, tile_height)),  # враг, воюет в ближнем бою
     'monster1': pygame.transform.scale(load_image('enemy1.png'), (tile_width, tile_height)),  # враг дальнего боя
@@ -402,7 +402,7 @@ def load_level(filename):  # чтение уровня
 class BackgroundTile(pygame.sprite.Sprite):  # класс фоновой картинки, пришлось разделить его и класс стены
     def __init__(self, pos_x, pos_y):  # положение
         super().__init__(tiles_group, all_sprites)  # добавляем в группы спрайтов
-        self.image = images['empty']  # изображение фоновой картинки
+        self.image = images['grass']  # изображение фоновой картинки
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)  # передвигаем фоновую картинку на её место
         self.mask = pygame.mask.from_surface(self.image)
@@ -1167,13 +1167,12 @@ def is_linear_path(x1, y1, x2, y2, owner=None, fraction=None, target=None, go_th
             if cond:
                 if i.rect.collidepoint(x1, y1):
                     return False
+            elif cond1:
+                if (i.rect.collidepoint(x1 + field, y1 - field) or i.rect.collidepoint(x1 - field, y1 + field)):
+                    return False
             else:
-                if cond1:
-                    if (i.rect.collidepoint(x1 + field, y1 - field) or i.rect.collidepoint(x1 - field, y1 + field)):
-                        return False
-                else:
-                    if (i.rect.collidepoint(x1 - field, y1 - field) or i.rect.collidepoint(x1 + field, y1 + field)):
-                        return False
+                if (i.rect.collidepoint(x1 - field, y1 - field) or i.rect.collidepoint(x1 + field, y1 + field)):
+                    return False
         # if not go_through_entities:
         #     for i in entity_group:
         #         if field == 1:
@@ -1459,16 +1458,16 @@ while True:
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_1:
                     inventory.current_slot = 0
                     inventory.weapon_frame.rect.x = 0
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_2:
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_2 and len(weapon_lst) >= 2:
                     inventory.current_slot = 1
                     inventory.weapon_frame.rect.x = inventory_slot_width
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_3:
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_3 and len(weapon_lst) >= 3:
                     inventory.current_slot = 2
                     inventory.weapon_frame.rect.x = inventory_slot_width * 2
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_4:
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_4 and len(weapon_lst) >= 4:
                     inventory.current_slot = 3
                     inventory.weapon_frame.rect.x = inventory_slot_width * 3
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_5:
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_5 and len(weapon_lst) >= 5:
                     inventory.current_slot = 4
                     inventory.weapon_frame.rect.x = inventory_slot_width * 4
                 # Esc = пауза
