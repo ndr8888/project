@@ -1607,6 +1607,9 @@ while True:
                 if inventory.rage_timer.time != 0:
                     pygame.draw.rect(screen, (255, 0, 255), (player.rect.x, player.rect.y,
                                                              tile_width, tile_height), 3)
+                if cheats:
+                    pygame.draw.rect(screen, (0, 0, 0), (player.rect.x - 3, player.rect.y - 3,
+                                                             tile_width + 6, tile_height + 6), 3)
                 attack_group.draw(screen)
                 for i in entity_group:  # всем сущностям и герою выводим полоску хп
                     draw_hp(i)
