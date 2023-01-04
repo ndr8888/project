@@ -484,6 +484,8 @@ class WallTriggerable(Wall):
     def type(self):
         if self.status:
             return 'wall'
+        else:
+            return 'empty'
 
 
 class Jewel(BackgroundTile):  # класс сокровищ
@@ -649,10 +651,9 @@ class Player(pygame.sprite.Sprite):
                 self.y_move = 0
 
     def damage(self, n):
-        if inventory.armor_timer.time:
-            self.hp -= n * 0
-        else:
-            self.hp -= n * 1
+        self.hp = round((self.hp - n) * 10) / 10
+        if self.hp % 1 == 0:
+            self.hp = int(self.hp)
         if self.hp <= 0:
             self.is_killed = True
 
@@ -684,48 +685,46 @@ class Monster(pygame.sprite.Sprite):
         self.next_cell = 0, 0
         self.x, self.y = self.rect.topleft
         self.state = False
+        self.state_new = False
         self.player_coords_old = player.pos_x, player.pos_y
         self.coords_old = self.pos_x, self.pos_y
         self.clever_shoot = clever_shoot
+        self.path = None
 
     def type(self):
         return 'monster'
 
     def update(self):
-        if not self.close_mode and (player.timer_x.time != 0 or player.timer_y.time != 0) and self.clever_shoot:
-            if abs(self.pos_x - player.pos_x) <= self.rang_max and abs(self.pos_y - player.pos_y) <= self.rang_max:
-                self.weapon.use(player.rect.x + player.x_move * tile_width + tile_width * 0.5,
-                                player.rect.y + player.y_move * tile_height + tile_width * 0.5)
-        else:
-            if abs(self.pos_x - player.pos_x) <= self.rang_min and abs(self.pos_y - player.pos_y) <= self.rang_min:
-                self.weapon.use(player.rect.x + tile_width * 0.5, player.rect.y + tile_width * 0.5)
-
+        if self.path is None:
+            self.path = board.get_path(self.pos_x, self.pos_y, player.pos_x, player.pos_y)
         if self.timer_x.time == 0 and self.timer_y.time == 0 and abs(
                 self.pos_x - player.pos_x) <= self.rang_max and abs(
             self.pos_y - player.pos_y) <= self.rang_max:
-            path = board.get_path(self.pos_x, self.pos_y, player.pos_x, player.pos_y)
-            next_cell = path[1]
-            state_new = self.state
+            self.path = board.get_path(self.pos_x, self.pos_y, player.pos_x, player.pos_y)
+            if not self.path:
+                return None
+            next_cell = self.path[1]
+            cond = board[self.pos_x - (next_cell[0] - self.pos_x)][
+                    self.pos_y - (next_cell[1] - self.pos_y)].type() == 'empty' and not (abs(
+                    self.pos_x - player.pos_x) == self.rang_min - 1 or abs(
+                    self.pos_y - player.pos_y) == self.rang_min - 1)
             if self.player_coords_old != (player.pos_x, player.pos_y) or self.coords_old != (self.pos_x, self.pos_y):
-                state_new = is_linear_path(*self.rect.center, *player.rect.center, owner=self, target=player,
-                                           fraction=monster_group)
-                self.player_coords_old = player.pos_x, player.pos_y
+                self.state_new = is_linear_path(*self.rect.center, *player.rect.center, owner=self, target=player,
+                                            fraction=monster_group, field=self.weapon.bullet_size[0] if type(self.weapon) in (BulletWeapon, BombWeapon) else 3, go_through_entities=True)
                 self.coords_old = self.pos_x, self.pos_y
-
+            elif not (not self.state and self.state_new and cond):
+                self.state_new = self.state
             if abs(
                     self.pos_x - player.pos_x) <= self.rang_max and abs(
-                self.pos_y - player.pos_y) <= self.rang_max:
+                self.pos_y - player.pos_y) <= self.rang_max and len(self.path) < self.rang_max * 2:
                 if ((self.rang_min <= abs(self.pos_x - player.pos_x) or self.rang_min <= abs(
-                        self.pos_y - player.pos_y)) or not state_new) and board[next_cell[0]][
+                        self.pos_y - player.pos_y)) or (not self.state_new)) and board[next_cell[0]][
                     next_cell[1]].type() == 'empty':
                     self.next_cell = next_cell
                     x_move, y_move = self.next_cell[0] - self.pos_x, self.next_cell[1] - self.pos_y
-                elif board[self.pos_x - (next_cell[0] - self.pos_x)][
-                    self.pos_y - (next_cell[1] - self.pos_y)].type() == 'empty' and not (abs(
-                    self.pos_x - player.pos_x) == self.rang_min - 1 or abs(
-                    self.pos_y - player.pos_y) == self.rang_min - 1) and self.state:
+                elif cond and self.state:
                     self.next_cell = [self.pos_x - (next_cell[0] - self.pos_x),
-                                      self.pos_y - (next_cell[1] - self.pos_y)]
+                                        self.pos_y - (next_cell[1] - self.pos_y)]
                     x_move, y_move = -(next_cell[0] - self.pos_x), -(next_cell[1] - self.pos_y)
                 # elif (abs(self.pos_x - player.pos_x) == self.rang_min - 1 or abs(self.pos_y - player.pos_y) == self.rang_min - 1) and board[self.pos_x + (next_cell[1] - self.pos_y)][self.pos_y + (next_cell[0] - self.pos_x)].type() == 'empty':
                 #     x_move, y_move = next_cell[1] - self.pos_y, next_cell[0] - self.pos_x
@@ -741,7 +740,9 @@ class Monster(pygame.sprite.Sprite):
                     self.y_move = y_move
                     self.timer_y.start()
                     board[self.pos_x][self.pos_y + y_move] = Blocked()
-            self.state = state_new
+            if not (not self.state and self.state_new and cond) or self.player_coords_old != (player.pos_x, player.pos_y):
+                self.player_coords_old = player.pos_x, player.pos_y
+                self.state = self.state_new
 
         if self.x_move != 0:
             self.timer_x.tick()
@@ -762,13 +763,21 @@ class Monster(pygame.sprite.Sprite):
                 board[self.pos_x][self.pos_y] = Empty()
                 self.pos_y += self.y_move
                 self.y_move = 0
-
+        if abs(self.pos_x - player.pos_x) <= self.rang_max and abs(self.pos_y - player.pos_y) <= self.rang_max and len(
+                self.path) < self.rang_max * 2:
+            if not self.close_mode and (player.timer_x.time != 0 or player.timer_y.time != 0) and self.clever_shoot:
+                self.weapon.use(player.rect.x + player.x_move * tile_width + tile_width * 0.5,
+                                player.rect.y + player.y_move * tile_height + tile_width * 0.5)
+            else:
+                self.weapon.use(player.rect.x + tile_width * 0.5, player.rect.y + tile_width * 0.5)
     def damage(self, n):
         # if inventory.rage_timer.time:  # если действует зелье увеличения урона
         #     self.hp -= n * 2  # то урон х2
         # else:
         #     self.hp -= n * 1
-        self.hp -= n
+        self.hp = round((self.hp - n) * 10) / 10
+        if self.hp % 1 == 0:
+            self.hp = int(self.hp)
         if self.hp <= 0:
             board[self.next_cell[0]][self.next_cell[1]] = Empty()
             board[self.pos_x][self.pos_y] = Empty()
@@ -828,7 +837,7 @@ class CloseAttack(pygame.sprite.Sprite):
         self.rect.x, self.rect.y = x - self.rect.w // 2, y - self.rect.h // 2
         self.damaged_lst = list()
         self.mask = pygame.mask.from_surface(self.image)
-        self.timer = Timer(FPS // 5)
+        self.timer = Timer(FPS // 4)
         self.timer.start()
         self.fraction = fraction
         self.dmg = damage
@@ -837,16 +846,19 @@ class CloseAttack(pygame.sprite.Sprite):
     def update(self):
         self.rect.x, self.rect.y = self.owner.rect.x - self.rect.w // 2 + tile_width * 0.5, self.owner.rect.y - self.rect.h // 2 + tile_width * 0.5
         for i in entity_group:  # проверка на столкновение с монстрами
-            if pygame.sprite.collide_mask(self, i) and i not in self.fraction and i not in self.damaged_lst and (
+            if pygame.sprite.collide_mask(self, i) and i not in self.fraction and i not in self.damaged_lst:
+                n = len(list(filter(lambda x: x, [
                     is_linear_path(*self.owner.rect.center, *i.rect.topleft, owner=self.owner, target=i,
-                                   fraction=self.fraction) or is_linear_path(*self.owner.rect.center, *i.rect.topright,
-                                                                             owner=self.owner, target=i,
-                                                                             fraction=self.fraction) or is_linear_path(
-                *self.owner.rect.center, *i.rect.bottomleft, owner=self.owner, target=i,
-                fraction=self.fraction) or is_linear_path(*self.owner.rect.center, *i.rect.bottomright,
-                                                          owner=self.owner, target=i, fraction=self.fraction)):
-                i.damage(self.dmg)
-                self.damaged_lst.append(i)
+                                   fraction=self.fraction, go_through_entities=True), is_linear_path(*self.owner.rect.center, *i.rect.topright,
+                                                                           owner=self.owner, target=i,
+                                                                           fraction=self.fraction, go_through_entities=True), is_linear_path(
+                        *self.owner.rect.center, *i.rect.bottomleft, owner=self.owner, target=i,
+                        fraction=self.fraction, go_through_entities=True), is_linear_path(*self.owner.rect.center, *i.rect.bottomright,
+                                                                owner=self.owner, target=i, fraction=self.fraction, go_through_entities=True)])))
+                if n > 0:
+                    string = str((self.dmg / 4) * n)
+                    i.damage(float(string[:string.find('.') + 2]))
+                    self.damaged_lst.append(i)
         self.timer.tick()
         if self.timer.time == 0:
             self.kill()
@@ -943,7 +955,7 @@ class Weapon(pygame.sprite.Sprite):
     def update(self):
         self.timer.tick()
         if self.owner == player and inventory.rage_timer.time != 0:
-            self.timer.tick()
+            self.timer.tick(0.5)
 
     # def use(self):
     #     if int(self.timer) == 0:
@@ -1042,6 +1054,8 @@ def generate_level(level):
                 BackgroundTile(x, y)
                 table[x].append(WinTeleport(x, y))
             elif level[y][x] == 'K':
+                global  is_key
+                is_key = True
                 BackgroundTile(x, y)
                 table[x].append(Key(x, y))
             elif level[y][x] == '%':
@@ -1058,13 +1072,12 @@ def generate_level(level):
                 table[x].append(HealPotion(x, y))
             elif level[y][x] == 'R':  # сокровище
                 BackgroundTile(x, y)
-                print(x, y)
                 table[x].append(RagePotion(x, y))
             elif level[y][x] == '1':  # монстер обозначается цифрой 1, при добавлнии новых монстров будет 2, 3 и тд
                 BackgroundTile(x, y)
                 table[x].append(
-                    Monster(x, y, CloseWeapon('empty_image', 'close_attack', -50, -50, None, monster_group, 1, FPS // 2,
-                                              rang=2.25), 10, 2, 7, 'monster', True, 10))
+                    Monster(x, y, CloseWeapon('empty_image', 'close_attack1', -50, -50, None, monster_group, 1, FPS // 2,
+                                          rang=3), 10, 2, 7, 'monster', True, 10, dop_groups=[] if map_num != 0 else [guard_monster_group]))
             elif level[y][x] == '2':  # монстер обозначается цифрой 1, при добавлнии новых монстров будет 2, 3 и тд
                 BackgroundTile(x, y)
                 table[x].append(Monster(x, y,
@@ -1105,19 +1118,46 @@ class Camera:
         self.dx_total += self.dx
         self.dy_total += self.dy
 
+# counter = 0
+def is_linear_path(x1, y1, x2, y2, owner=None, fraction=None, target=None, go_through_entities=False, field=1):
+    # return True
 
-def is_linear_path(x1, y1, x2, y2, owner=None, fraction=None, target=None, go_through_entities=False):
+    # global counter
+    # print(counter, owner, field == 1)
+    # counter += 1
     a = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
     vector = ((x2 - x1) / a, (y2 - y1) / a)
+    # field = 1
+    cond = field == 1
+    cond1 = (vector[0] >= 0) == (vector[1] >= 0)
+    field //= 2
     while abs(int(x1) - int(x2)) > 3 or abs(int(y1) - int(y2)) > 3:
         for i in wall_group:
-            if i.rect.collidepoint(x1, y1) and i != owner and i != target and i not in fraction:
-                return False
-        if not go_through_entities:
-            for i in entity_group:
-                if i.rect.collidepoint(x1, y1) and i != owner and i != target and i not in fraction:
-                    print(i not in fraction)
-                    return False
+            if i != owner and i != target and i not in fraction:
+                if cond:
+                    if i.rect.collidepoint(x1, y1):
+                        return False
+                else:
+                    if cond1:
+                        if (i.rect.collidepoint(x1 + field, y1 - field) or i.rect.collidepoint(x1 - field, y1 + field)):
+                            return False
+                    else:
+                        if (i.rect.collidepoint(x1 - field, y1 - field) or i.rect.collidepoint(x1 + field, y1 + field)):
+                            return False
+        # if not go_through_entities:
+        #     for i in entity_group:
+        #         if field == 1:
+        #             if i.rect.collidepoint(x1, y1) and i != owner and i != target and i not in fraction:
+        #                 return False
+        #         else:
+        #             if (vector[0] >= 0) == (vector[1] >= 0):
+        #                 if (i.rect.collidepoint(x1 + field // 2, y1 - field // 2) or i.rect.collidepoint(
+        #                         x1 - field // 2, y1 + field // 2)) and i != owner and i != target and i not in fraction:
+        #                     return False
+        #             else:
+        #                 if (i.rect.collidepoint(x1 - field // 2, y1 - field // 2) or i.rect.collidepoint(
+        #                         x1 + field // 2, y1 + field // 2)) and i != owner and i != target and i not in fraction:
+        #                     return False
         x1 += vector[0]
         y1 += vector[1]
     return True
@@ -1160,17 +1200,24 @@ class Board:  # класс матрицы доски
                 matrix = [list(map(lambda x: False if x.type() in ['wall'] else -1, i)) for i in self.table]
                 matrix[x1][y1] = 1
                 while matrix[x2][y2] == -1:
+                    flag = False
                     for x in range(self.width):
                         for y in range(self.height):
                             if matrix[x][y] == n:
                                 if 0 <= x - 1 < self.width and 0 <= y < self.height and matrix[x - 1][y] == -1:
                                     matrix[x - 1][y] = n + 1
+                                    flag = True
                                 if 0 <= x + 1 < self.width and 0 <= y < self.height and matrix[x + 1][y] == -1:
                                     matrix[x + 1][y] = n + 1
+                                    flag = True
                                 if 0 <= x < self.width and 0 <= y - 1 < self.height and matrix[x][y - 1] == -1:
                                     matrix[x][y - 1] = n + 1
+                                    flag = True
                                 if 0 <= x < self.width and 0 <= y + 1 < self.height and matrix[x][y + 1] == -1:
                                     matrix[x][y + 1] = n + 1
+                                    flag = True
+                    if not flag:
+                        return False
                     n += 1
         # print(*matrix, sep='\n')
         x, y = x2, y2
@@ -1309,12 +1356,13 @@ def draw_hp(entity):
 
 
 direction, state = start_screen()
-hp_potions = 0
-rage_potions = 0
+fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
 if state == 2:
     terminate()
 is_start = True
 while True:
+    hp_potions = 0
+    rage_potions = 0
     if not is_start:
         direction = [0, 0]
     is_start = False
@@ -1329,7 +1377,8 @@ while True:
     is_won = False
     weapon_lst = [CloseWeapon('sword', 'close_attack1', -50, -50, player, player_group, 2, FPS // 2,
                                               rang=4, name='меч')]
-    for map_num, map_name in enumerate(['map.txt', 'map1.txt']):
+    for map_num, map_name in enumerate(['map.txt', 'map1.txt', 'map2.txt']):
+        is_key = False
         potion_group = pygame.sprite.Group()
         is_portal_activated = False
         tiles_group = pygame.sprite.Group()
@@ -1355,6 +1404,8 @@ while True:
         inventory = Inventory()
         font_for_inventory = pygame.font.Font(None, 22)
         pause_btn = StaticSprite(WIDTH - inventory_slot_width, HEIGHT - inventory_slot_width, 'pause')
+        if not is_key:
+            is_portal_activated = True
         while level_running:
             time_counter += 1
             # изменяем ракурс камеры
@@ -1472,6 +1523,9 @@ while True:
                 if sprite not in static_sprites:
                     camera.apply(sprite)
             screen.fill((255, 255, 255))
+
+            screen.blit(fon, (0, 0))
+
             tiles_group.draw(
                 screen)  # спрайты клеток и сущности рисуются отдельно, чтобы спрайты клеток не наслаивались на сущностей
             potion_group.draw(screen)
