@@ -748,7 +748,6 @@ class Monster(pygame.sprite.Sprite):
             if (self.player_coords_old != (player.pos_x, player.pos_y) or self.coords_old != (self.pos_x, self.pos_y)) and not (self.rang_min <= abs(
                     self.pos_x - player.pos_x) <= self.rang_max and self.rang_min <= abs(
                 self.pos_y - player.pos_y) <= self.rang_max):
-                print(1)
                 self.state_new = is_linear_path(*self.rect.center, *player.rect.center, owner=self, target=player,
                                                 fraction=monster_group,
                                                 field=self.weapon.bullet_size[0] if type(self.weapon) in (
