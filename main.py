@@ -1153,7 +1153,7 @@ def generate_level(level):
             elif level[y][x] == '3':  # монстр, при убийстве которого разрушается некоторая стена
                 BackgroundTile(x, y)
                 table[x].append(
-                    Monster(x, y, BulletWeapon('empty_image', 'bullet', -50, -50, None, monster_group, 10, FPS, speed=15,
+                    Monster(x, y, BulletWeapon('empty_image', 'bullet', -50, -50, None, monster_group, 13, FPS, speed=15,
                                                rang=500), 150, 8, 8, 'monster2', False, 30,
                             dop_groups=[guard_monster_group], clever_shoot=True))
             elif level[y][x] == '4':  # монстр, который кидает бомбы
@@ -1200,7 +1200,7 @@ class Camera:
 
 def is_linear_path(x1, y1, x2, y2, owner=None, fraction=None, target=None, go_through_entities=False, field=1):
     a = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-    vector = ((x2 - x1) / a, (y2 - y1) / a)
+    vector = ((x2 - x1) / a * 2, (y2 - y1) / a * 2)
     cond = field == 1
     cond1 = (vector[0] >= 0) == (vector[1] >= 0)
     field //= 2
