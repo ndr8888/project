@@ -516,7 +516,7 @@ class WallTriggerable(Wall):  # разрушаемая стена. Разруш�
         self.key_trigger, self.monster_trigger = key_trigger, monster_trigger
 
     def update(self):
-        if (len(guard_monster_group) == 0 or self.monster_trigger) and (keys_not_collected == 0 or self.key_trigger):  # если все monster2 мертвы, то стены рушатся
+        if (len(guard_monster_group) == 0 or not self.monster_trigger) and (keys_not_collected == 0 or not self.key_trigger):  # если все monster2 мертвы, то стены рушатся
             self.status = False
             self.image = images['grass']
 
@@ -1118,7 +1118,7 @@ def generate_level(level):
                 BackgroundTile(x, y)
                 table[x].append(Key(x, y))
             elif level[y][x] == '%':  # стена, которая разрушится, если умрёт страж
-                table[x].append(WallTriggerable(x, y, True if map_num in [1] else False, True if map_num in [] else False))
+                table[x].append(WallTriggerable(x, y, True if map_num in [1] else False, True if map_num in [0] else False))
             elif level[y][x] == '@':  # игрок
                 BackgroundTile(x, y)
                 player_coords = x, y
@@ -1452,7 +1452,7 @@ while True:
                               rang=4, name='меч')]
     cheats = False
 
-    for map_num, map_name in enumerate(['map1.txt', 'map1.txt', 'map2.txt']):
+    for map_num, map_name in enumerate(['map.txt', 'map1.txt', 'map2.txt']):
         level_running = True
         save_potions = [hp_potions, rage_potions]
         save_hp = player.hp
