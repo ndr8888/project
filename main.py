@@ -12,6 +12,34 @@ tile_width = tile_height = 50  # размеры кнопокa
 inventory_slot_width = 60  # размеры слотов инвентаря
 
 
+class AnimatedSprite(pygame.sprite.Sprite):  # спецэффекты
+    def __init__(self, sheet, columns, rows, x, y, klv):  # klv - кол-во картинок
+        self.klv = klv
+        super().__init__(animation_group)
+        self.frames = []
+        self.cut_sheet(sheet, columns, rows)  # режем на квадратики по слайдам
+        self.cur_frame = 0
+        self.image = self.frames[self.cur_frame]  # меняем картинки
+        self.rect = self.rect.move(x, y)
+        self.cnt = 0  # счётчик, сколько раз сменилась картинка
+
+    def cut_sheet(self, sheet, columns, rows):
+        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
+                                sheet.get_height() // rows)
+        for j in range(rows):
+            for i in range(columns):
+                frame_location = (self.rect.w * i, self.rect.h * j)
+                self.frames.append(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)))
+
+    def update(self):
+        self.cnt += 1
+        if self.cnt == self.klv:  # если объект - спецэффект и он полностью показался, то удаляется
+            self.kill()
+        self.cur_frame = (self.cur_frame + 1) % len(self.frames)
+        self.image = self.frames[self.cur_frame]
+
+
 class Timer:  # класс для засекания времени
     def __init__(self, time_max):  # подаем время, на которое засекаем таймер
         self.time_max = time_max
@@ -79,7 +107,7 @@ images = {
     'bomb': load_image('bomb2.png'),  # бомба, оружие
     'pause': pygame.transform.scale(load_image('pause.png'), (inventory_slot_width, inventory_slot_width)),  # пауза
     'snare': load_image('snare.png'),  # ловушка,
-    'heal_zone': pygame.transform.scale(load_image('cross_heal.png'), (tile_width, tile_height))  # ловушка,
+    'heal_zone': pygame.transform.scale(load_image('teleport_win.png'), (tile_width, tile_height))  # ловушка,
 }
 FPS = 60  # кол-во тиков в секунду
 
@@ -462,6 +490,7 @@ class Teleport(BackgroundTile):  # класс телепорта
     def type(self):
         return 'empty'
 
+
 class HealZone(BackgroundTile):  # класс телепорта
     def __init__(self, pos_x, pos_y):
         super().__init__(pos_x, pos_y)  # положение
@@ -716,12 +745,18 @@ class Monster(pygame.sprite.Sprite):
         #                           rang=2.25)  # изменяемый
         weapon.owner = self
         weapon.fraction = monster_group  # чтобы не бил своих и не получал урона от ловушек
-        self.weapon = weapon
+        self.weapon = weapon  # оружие, требуется для выбора картинки
+        self.frames = []  # список с картинками
+        self.cur_frame = 0  # для смены картинок
+        self.cnt = 0  # счётчик, чтобы менять картинку не каждую итерацию
         self.hp_max = hp_max
         self.hp = self.hp_max
         self.rang_min = rang_min  # радиус, в котором монстр нападёт на тебя
         self.rang_max = rang_max
-        self.image = images[image_name]
+        if type(self.weapon) == CloseWeapon:
+            self.set_image(type(self.weapon))
+        else:
+            self.image = images[image_name]
         self.close_mode = close_mode
         speed = speed
         self.timer_x = Timer(speed)
@@ -746,11 +781,17 @@ class Monster(pygame.sprite.Sprite):
         return 'monster'
 
     def update(self):
+        self.cnt += 1
+        if not self.state:  # место, где моб не двигается
+            pass
+        if self.frames and self.cnt % 5 == 0:
+            self.change_image()
         if self.path is None:
             self.path = board.get_path(self.pos_x, self.pos_y, player.pos_x, player.pos_y)
         if self.timer_x.time == 0 and self.timer_y.time == 0 and abs(
                 self.pos_x - player.pos_x) <= self.rang_max and abs(
             self.pos_y - player.pos_y) <= self.rang_max:
+            # место, где начинается агрорадиус
             self.path = board.get_path(self.pos_x, self.pos_y, player.pos_x, player.pos_y)
             if not self.path:
                 return None
@@ -759,13 +800,14 @@ class Monster(pygame.sprite.Sprite):
                        self.pos_y - (next_cell[1] - self.pos_y)].type() == 'empty' and not (abs(
                 self.pos_x - player.pos_x) == self.rang_min - 1 or abs(
                 self.pos_y - player.pos_y) == self.rang_min - 1)
-            if (self.player_coords_old != (player.pos_x, player.pos_y) or self.coords_old != (self.pos_x, self.pos_y)) and not (self.rang_min <= abs(
+            if (self.player_coords_old != (player.pos_x, player.pos_y) or self.coords_old != (
+            self.pos_x, self.pos_y)) and not (self.rang_min <= abs(
                     self.pos_x - player.pos_x) <= self.rang_max and self.rang_min <= abs(
                 self.pos_y - player.pos_y) <= self.rang_max):
                 self.state_new = is_linear_path(*self.rect.center, *player.rect.center, owner=self, target=player,
                                                 fraction=monster_group,
                                                 field=self.weapon.bullet_size[0] if type(self.weapon) in (
-                                                BulletWeapon, BombWeapon) else 3, go_through_entities=True)
+                                                    BulletWeapon, BombWeapon) else 3, go_through_entities=True)
                 self.coords_old = self.pos_x, self.pos_y
             elif not (not self.state and self.state_new and cond):
                 self.state_new = self.state
@@ -796,11 +838,11 @@ class Monster(pygame.sprite.Sprite):
                     self.timer_y.start()
                     board[self.pos_x][self.pos_y + y_move] = Blocked()
             if not (not self.state and self.state_new and cond) or self.player_coords_old != (
-            player.pos_x, player.pos_y):
+                    player.pos_x, player.pos_y):
                 self.player_coords_old = player.pos_x, player.pos_y
                 self.state = self.state_new
 
-        if self.x_move != 0:
+        if self.x_move != 0:  # место, где мобы ходят только по x
             self.timer_x.tick()
             x_old = self.x
             self.x += self.x_move * (tile_width / self.timer_x.time_max)
@@ -810,7 +852,7 @@ class Monster(pygame.sprite.Sprite):
                 board[self.pos_x][self.pos_y] = Empty()
                 self.pos_x += self.x_move
                 self.x_move = 0
-        if self.y_move != 0:
+        if self.y_move != 0:  # место, где мобы ходят по y
             self.timer_y.tick()
             self.y += self.y_move * (tile_width / self.timer_y.time_max)
             self.rect.y = self.y + camera.dy_total
@@ -819,8 +861,10 @@ class Monster(pygame.sprite.Sprite):
                 board[self.pos_x][self.pos_y] = Empty()
                 self.pos_y += self.y_move
                 self.y_move = 0
+        # место, где моб рядом с персом
         if abs(self.pos_x - player.pos_x) <= self.rang_max and abs(self.pos_y - player.pos_y) <= self.rang_max and len(
-                self.path) < self.rang_max * 1.5 and (not self.close_mode or (abs(self.pos_x - player.pos_x) <= self.rang_min and abs(self.pos_y - player.pos_y) <= self.rang_min)):
+                self.path) < self.rang_max * 1.5 and (not self.close_mode or (
+                abs(self.pos_x - player.pos_x) <= self.rang_min and abs(self.pos_y - player.pos_y) <= self.rang_min)):
             if not self.close_mode and (player.timer_x.time != 0 or player.timer_y.time != 0) and self.clever_shoot:
                 self.weapon.use(player.rect.x + player.x_move * tile_width + tile_width * 0.5,
                                 player.rect.y + player.y_move * tile_height + tile_width * 0.5)
@@ -848,6 +892,24 @@ class Monster(pygame.sprite.Sprite):
             #         print(self.pos_x, self.pos_y, a.rect.x, a.rect.y)
             self.kill()
 
+    def set_image(self, weapon):
+        if weapon == CloseWeapon:
+            self.cut_sheet(load_image('close_mob1.png'), 7, 1)  # режем на квадратики по слайдам
+        self.image = self.frames[self.cur_frame]  # меняем картинки
+
+    def cut_sheet(self, sheet, columns, rows):  # режем на квадратики по слайдам
+        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
+                                sheet.get_height() // rows)
+        for j in range(rows):
+            for i in range(columns):
+                frame_location = (self.rect.w * i, self.rect.h * j)
+                self.frames.append(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)))
+
+    def change_image(self):
+        self.cur_frame = (self.cur_frame + 1) % len(self.frames)  # меняем картинку
+        self.image = self.frames[self.cur_frame]  # устанавливаем картинку
+
 
 class Bullet(pygame.sprite.Sprite):  # дальняя атака
     def __init__(self, picture, x1, y1, x2, y2, fraction, damage, speed, rang, bullet_size, go_through):
@@ -873,6 +935,7 @@ class Bullet(pygame.sprite.Sprite):  # дальняя атака
         self.rect.y += self.y1 - old_y
         for i in entity_group:  # проверка на столкновение с монстрами
             if pygame.sprite.collide_mask(self, i) and i not in self.fraction:  # если не свои
+                boom = AnimatedSprite(load_image("babax1.png"), 9, 8, self.rect.x, self.rect.y, 72)
                 i.damage(self.dmg)
                 if not self.go_through:  # если можем пролететь
                     self.kill()
@@ -941,7 +1004,7 @@ class MagicAttack(pygame.sprite.Sprite):  # магическая атака, б�
 
     def update(self):
         if self.timer.time == self.timer.time_max:
-            for i in entity_group:  # проверка на столкновение с монстрами
+            for i in entity_group:  # проверка на столкновение с монстрами и игроком
                 if pygame.sprite.collide_mask(self, i) and i not in self.fraction and i not in self.damaged_lst and (
                         is_linear_path(*self.rect.center, *i.rect.topleft, target=i,
                                        fraction=self.fraction, go_through_entities=True) or is_linear_path(
@@ -1151,7 +1214,8 @@ def generate_level(level):
                 BackgroundTile(x, y)
                 table[x].append(Monster(x, y,
                                         BulletWeapon('empty_image', 'bullet', -50, -50, None, monster_group, 1, FPS,
-                                                     speed=8, rang=400), 6, 5, 9, 'monster1', False, 10, dop_groups=[] if map_num != 0 else [guard_monster_group]))
+                                                     speed=8, rang=400), 6, 5, 9, 'monster1', False, 10,
+                                        dop_groups=[] if map_num != 0 else [guard_monster_group]))
             elif level[y][x] == '3':  # монстр, при убийстве которого разрушается некоторая стена
                 BackgroundTile(x, y)
                 table[x].append(
@@ -1435,6 +1499,7 @@ while True:
     entity_group = pygame.sprite.Group()
     static_sprites = pygame.sprite.Group()
     weapon_group = pygame.sprite.Group()
+    animation_group = pygame.sprite.Group()
     player = Player(0, 0)
     time_counter = 0
     is_won = False
@@ -1591,6 +1656,7 @@ while True:
                 attack_group.update()
                 weapon_group.update()
                 tiles_group.update()
+                animation_group.update()
                 camera.update(player)
                 for sprite in all_sprites:
                     if sprite not in static_sprites:
@@ -1609,11 +1675,12 @@ while True:
                                                              tile_width, tile_height), 3)
                 if cheats:
                     pygame.draw.rect(screen, (0, 0, 0), (player.rect.x - 3, player.rect.y - 3,
-                                                             tile_width + 6, tile_height + 6), 3)
+                                                         tile_width + 6, tile_height + 6), 3)
                 attack_group.draw(screen)
                 for i in entity_group:  # всем сущностям и герою выводим полоску хп
                     draw_hp(i)
                 # обновляем инвентарь
+                animation_group.draw(screen)
                 static_sprites.draw(screen)
                 inventory.quantity_rendering()
                 clock.tick(FPS)
