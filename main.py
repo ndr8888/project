@@ -1465,7 +1465,7 @@ while True:
                               rang=4, name='меч')]
     cheats = False
 
-    for map_num, map_name in enumerate(['map3.txt', 'map3.txt', 'map2.txt', 'map3', 'map4.txt']):
+    for map_num, map_name in enumerate(['map.txt', 'map1.txt', 'map2.txt', 'map3', 'map4.txt']):
         level_running = True
         save_potions = [hp_potions, rage_potions]
         save_hp = player.hp
