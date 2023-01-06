@@ -541,15 +541,15 @@ class Jewel(BackgroundTile):  # класс сокровищ
                 weapon_lst.append(BulletWeapon('gun', 'bullet', -50, -50,
                                                player,
                                                player_group,
-                                               15, FPS // 2,
-                                               speed=17,
+                                               10, FPS // 2,
+                                               speed=13,
                                                rang=400, name='пистолет'))
             if map_num == 1:
-                weapon_lst.append(MagicWeapon('staff', 'blast', -50, -50, player, player_group, 15, FPS // 1.5,
+                weapon_lst.append(MagicWeapon('staff', 'blast', -50, -50, player, player_group, 10, FPS // 1.5,
                                               area_width=1.25, name='меч', rang=300))
             if map_num == 2:
-                weapon_lst.append(CloseWeapon('spear', 'close_attack', -50, -50, player, player_group, 3, FPS,
-                                              rang=4.5, name='копьё'))
+                weapon_lst.append(CloseWeapon('spear', 'close_attack', -50, -50, player, player_group, 13, FPS // 2,
+                                              rang=4.8, name='копьё'))
             if map_num == 3:
                 weapon_lst.append(
                     BombWeapon('bomb_launcher', 'bomb', -50, -50, player, player_group, 15, FPS, speed=12, rang=300))
@@ -1118,7 +1118,7 @@ def generate_level(level):
                 BackgroundTile(x, y)
                 table[x].append(Key(x, y))
             elif level[y][x] == '%':  # стена, которая разрушится, если умрёт страж
-                table[x].append(WallTriggerable(x, y, True if map_num in [1] else False, True if map_num in [0, 2] else False))
+                table[x].append(WallTriggerable(x, y, True if map_num in [1, 2] else False, True if map_num in [0, 3, 3.2] else False))
             elif level[y][x] == '@':  # игрок
                 BackgroundTile(x, y)
                 player_coords = x, y
@@ -1149,7 +1149,7 @@ def generate_level(level):
                 BackgroundTile(x, y)
                 table[x].append(Monster(x, y,
                                         BulletWeapon('empty_image', 'bullet', -50, -50, None, monster_group, 10, FPS,
-                                                     speed=10, rang=400), 60, 5, 9, 'monster1', False, 11, dop_groups=[] if map_num != 0 else [guard_monster_group]))
+                                                     speed=10, rang=400), 60, 5, 9, 'monster1', False, 11, dop_groups=[] if map_num not in [0, 3.2] else [guard_monster_group]))
             elif level[y][x] == '3':  # монстр, при убийстве которого разрушается некоторая стена
                 BackgroundTile(x, y)
                 table[x].append(
@@ -1160,32 +1160,39 @@ def generate_level(level):
                 BackgroundTile(x, y)
                 table[x].append(Monster(x, y,
                                         BombWeapon('empty_image', 'bomb', -50, -50, None, monster_group, 10, FPS,
-                                                   speed=8, rang=400), 80, 5, 9, 'monster1', False, 10))
+                                                   speed=8, rang=300, area_width=3.5), 80, 5, 9, 'monster1', False, 10, clever_shoot=True, dop_groups=[] if map_num not in [0, 3.2] else [guard_monster_group]))
             elif level[y][x] == '5':  # монстр ближнего боя
                 BackgroundTile(x, y)
                 table[x].append(
                     Monster(x, y,
                             CloseWeapon('empty_image', 'close_attack2', -50, -50, None, monster_group, 10, FPS // 1.5,
                                         rang=2.5), 60, 1, 9, 'monster', True, 8,
-                            dop_groups=[] if map_num != 0 else [guard_monster_group]))
-            elif level[y][x] == '6':  # монстр дальнего боя
+                            dop_groups=[] if map_num not in [0, 3.2] else [guard_monster_group]))
+            elif level[y][x] == '':  # монстр дальнего боя
                 BackgroundTile(x, y)
                 table[x].append(Monster(x, y,
                                         MagicWeapon('empty_image', 'bullet', -50, -50, None, monster_group, 10, FPS,
-                                                    rang=400, area_width=1.5, ), 60, 5, 9, 'monster1', False, 11, dop_groups=[] if map_num != 0 else [guard_monster_group]))
+                                                    rang=400, area_width=1.5, ), 60, 5, 9, 'monster1', False, 11, dop_groups=[] if map_num not in [0, 3.2] else [guard_monster_group]))
             elif level[y][x] == '7':  # монстр ближнего боя
                 BackgroundTile(x, y)
                 table[x].append(
                     Monster(x, y,
                             CloseWeapon('empty_image', 'close_attack', -50, -50, None, monster_group, 10, FPS,
                                         rang=3.5), 100, 3, 7, 'monster', True, 12,
-                            dop_groups=[] if map_num != 0 else [guard_monster_group]))
+                            dop_groups=[] if map_num not in [0, 3.2] else [guard_monster_group]))
             elif level[y][x] == '8':  # монстр, при убийстве которого разрушается некоторая стена
                 BackgroundTile(x, y)
                 table[x].append(
                     Monster(x, y, BulletWeapon('empty_image', 'bullet', -50, -50, None, monster_group, 13, FPS, speed=25,
                                                rang=tile_width * 30, bullet_size=(tile_width, tile_width)), 100, tile_width * 30, tile_width * 30, 'monster2', False, math.inf,
-                            dop_groups=[guard_monster_group], clever_shoot=False))
+                            dop_groups=[] if map_num not in [0, 3.2] else [guard_monster_group], clever_shoot=False))
+            elif level[y][x] == '9':  # монстр ближнего боя
+                BackgroundTile(x, y)
+                table[x].append(
+                    Monster(x, y,
+                            CloseWeapon('empty_image', 'close_attack1', -50, -50, None, monster_group, 15, FPS // 1.5,
+                                        rang=4), 200, 2, 15, 'monster', True, 8,
+                            dop_groups=[guard_monster_group]))
     # вернем игрока, а также координаты игрока
     return Board(table), player_coords[0], player_coords[1]
 
@@ -1477,9 +1484,9 @@ while True:
             hp_potions, rage_potions = save_potions
             player.hp = save_hp
             weapon_lst = save_weapons.copy()
-            potion_group = pygame.sprite.Group()
-            for map_num, map_name in [(map_num, map_name)] if map_name != 'map3' else [(3.1, 'map3.1.txt'), (3.2, 'map3.1.txt'), (3, 'map3.txt')]:
+            for map_num, map_name in [(map_num, map_name)] if map_name != 'map3' else [(3.1, 'map3.1.txt'), (3.2, 'map3.2.txt'), (3, 'map3.txt')]:
                 keys_not_collected = 0
+                potion_group = pygame.sprite.Group()
                 tiles_group = pygame.sprite.Group()  # всё, что не является сущностью и стеной
                 snares_group = pygame.sprite.Group()  # ловушки
                 wall_group = pygame.sprite.Group()  # стены
