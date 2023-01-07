@@ -552,7 +552,7 @@ class Jewel(BackgroundTile):  # класс сокровищ
                                               rang=4.8, name='копьё'))
             if map_num == 3:
                 weapon_lst.append(
-                    BombWeapon('bomb_launcher', 'bomb', -50, -50, player, player_group, 15, FPS, speed=12, rang=300))
+                    BombWeapon('bomb_launcher', 'bomb', -50, -50, player, player_group, 10, FPS // 1.5, speed=13, rang=400))
             # weapon_lst.append(MagicWeapon('staff', 'blast', -50, -50, player, player_group, 1, FPS,
             #                               area_width=1, name='меч'))
             # добавляем зельку в инвентарь
@@ -734,6 +734,8 @@ class Monster(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.next_cell = 0, 0
         self.x, self.y = self.rect.topleft
+        self.rect.x += camera.dx_total
+        self.rect.y += camera.dy_total
         self.state = False
         self.state_new = False
         self.player_coords_old = player.pos_x, player.pos_y  # место, где был персонаж до анимации его движения
@@ -847,6 +849,39 @@ class Monster(pygame.sprite.Sprite):
             #         a = RagePotion(self.pos_x, self.pos_y)
             #         print(self.pos_x, self.pos_y, a.rect.x, a.rect.y)
             self.kill()
+
+
+class Necromancer(Monster):
+    def __init__(self, *args, spawn_time, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.wait_timer = Timer(FPS * 2)
+        self.wait_timer.start()
+        self.spawn_timer = Timer(spawn_time)
+        self.spawn_timer.start()
+
+    def update(self):
+        super().update()
+        self.wait_timer.tick()
+        if self.wait_timer.time == 0:
+            self.spawn_timer.tick()
+            if self.spawn_timer.time == 0 and len(spawned_monsters) <= 4:
+                for _ in range(2):
+                    cells = [(self.pos_x + 1, self.pos_y), (self.pos_x, self.pos_y - 1), (self.pos_x - 1, self.pos_y), (self.pos_x, self.pos_y - 1)]
+                    random.shuffle(cells)
+                    for i in cells:
+                        print(board[i[0]][i[1]].type(), i)
+                        if board[i[0]][i[1]].type() == 'empty':
+                            rand = random.random()
+                            if rand < 0.33:
+                                board[i[0]][i[1]] = Monster(i[0], i[1], CloseWeapon('empty_image', 'close_attack1', -50, -50, None, monster_group, 15, FPS, rang=3), 80, 2, 7, 'monster', True, 11,  dop_groups=[spawned_monsters, guard_monster_group])
+                            elif rand < 0.66:
+                                board[i[0]][i[1]] = Monster(i[0], i[1], CloseWeapon('empty_image', 'close_attack2', -50, -50, None, monster_group, 10, FPS // 1.5,
+                                        rang=2.5), 60, 1, 9, 'monster', True, 8,
+                            dop_groups=[spawned_monsters, guard_monster_group])
+                            else:
+                                board[i[0]][i[1]] = Monster(i[0], i[1], BulletWeapon('empty_image', 'bullet', -50, -50, None, monster_group, 10, FPS, speed=13, rang=400), 60, 5, 9, 'monster1', False, 11, clever_shoot=False, dop_groups=[spawned_monsters, guard_monster_group])
+                            break
+                self.spawn_timer.start()
 
 
 class Bullet(pygame.sprite.Sprite):  # дальняя атака
@@ -1118,7 +1153,7 @@ def generate_level(level):
                 BackgroundTile(x, y)
                 table[x].append(Key(x, y))
             elif level[y][x] == '%':  # стена, которая разрушится, если умрёт страж
-                table[x].append(WallTriggerable(x, y, True if map_num in [1, 2] else False, True if map_num in [0, 3, 3.2] else False))
+                table[x].append(WallTriggerable(x, y, True if map_num in [1, 2] else False, True if map_num in [0, 3, 3.2, 4] else False))
             elif level[y][x] == '@':  # игрок
                 BackgroundTile(x, y)
                 player_coords = x, y
@@ -1183,7 +1218,7 @@ def generate_level(level):
             elif level[y][x] == '8':  # монстр, при убийстве которого разрушается некоторая стена
                 BackgroundTile(x, y)
                 table[x].append(
-                    Monster(x, y, BulletWeapon('empty_image', 'bullet', -50, -50, None, monster_group, 13, FPS, speed=25,
+                    Monster(x, y, BulletWeapon('empty_image', 'blast', -50, -50, None, monster_group, 13, FPS, speed=25,
                                                rang=tile_width * 30, bullet_size=(tile_width, tile_width)), 100, tile_width * 30, tile_width * 30, 'monster2', False, math.inf,
                             dop_groups=[] if map_num not in [0, 3.2] else [guard_monster_group], clever_shoot=False))
             elif level[y][x] == '9':  # монстр ближнего боя
@@ -1193,6 +1228,12 @@ def generate_level(level):
                             CloseWeapon('empty_image', 'close_attack1', -50, -50, None, monster_group, 15, FPS // 1.5,
                                         rang=4), 200, 2, 15, 'monster', True, 8,
                             dop_groups=[guard_monster_group]))
+            elif level[y][x] == 'N':  # монстр, при убийстве которого разрушается некоторая стена
+                BackgroundTile(x, y)
+                table[x].append(
+                    Necromancer(x, y, BulletWeapon('empty_image', 'blast', -50, -50, None, monster_group, 13, FPS // 2, speed=9,
+                                               rang=tile_width * 100, bullet_size=(tile_width, tile_height)), 350, 10, 100, 'monster2', False, 50, spawn_time=FPS * 9, is_mage=True,
+                            dop_groups=[guard_monster_group], clever_shoot=True))
     # вернем игрока, а также координаты игрока
     return Board(table), player_coords[0], player_coords[1]
 
@@ -1472,7 +1513,7 @@ while True:
                               rang=4, name='меч')]
     cheats = False
 
-    for map_num, map_name in enumerate(['map.txt', 'map1.txt', 'map2.txt', 'map3', 'map4.txt']):
+    for map_num, map_name in enumerate(['map.txt', 'map1.txt', 'map2.txt', 'map3', 'map4']):
         level_running = True
         save_potions = [hp_potions, rage_potions]
         save_hp = player.hp
@@ -1484,13 +1525,23 @@ while True:
             hp_potions, rage_potions = save_potions
             player.hp = save_hp
             weapon_lst = save_weapons.copy()
-            for map_num, map_name in [(map_num, map_name)] if map_name != 'map3' else [(3.1, 'map3.1.txt'), (3.2, 'map3.2.txt'), (3, 'map3.txt')]:
+
+            if map_name == 'map3':
+                map_rotation = [(3.1, 'map3.1.txt'), (3.2, 'map3.2.txt'), (3, 'map3.txt')]
+            elif map_name == 'map4':
+                map_rotation = [(4.1, 'map4.1.txt'), (4, 'map4.txt'), (4.2, 'map4.2.txt')]
+            else:
+                map_rotation = [(map_num, map_name)]
+
+            for map_num, map_name in map_rotation:
+                camera = Camera()
                 keys_not_collected = 0
                 potion_group = pygame.sprite.Group()
                 tiles_group = pygame.sprite.Group()  # всё, что не является сущностью и стеной
                 snares_group = pygame.sprite.Group()  # ловушки
                 wall_group = pygame.sprite.Group()  # стены
                 monster_group = pygame.sprite.Group()
+                spawned_monsters = pygame.sprite.Group()
                 guard_monster_group = pygame.sprite.Group()  # монстры, при смерти которых разрушаются стены
                 entity_group = pygame.sprite.Group()  # сущности (игрок и монстры)
                 attack_group = pygame.sprite.Group()  # ближняя, дальняя, магическая атаки и бомбы
@@ -1504,7 +1555,6 @@ while True:
                 pos = 0, 0
                 board, player_x, player_y = generate_level(load_level(map_name))
                 player.set_at_position(player_x, player_y)
-                camera = Camera()
                 is_clicked_r, is_clicked_l = False, False
                 level_running = True
                 life_running = True
