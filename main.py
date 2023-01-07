@@ -12,6 +12,34 @@ tile_width = tile_height = 50  # размеры кнопокa
 inventory_slot_width = 60  # размеры слотов инвентаря
 
 
+class AnimatedSprite(pygame.sprite.Sprite):  # спецэффекты
+    def __init__(self, sheet, columns, rows, x, y, klv):  # klv - кол-во картинок
+        self.klv = klv
+        super().__init__(animation_group)
+        self.frames = []
+        self.cut_sheet(sheet, columns, rows)  # режем на квадратики по слайдам
+        self.cur_frame = 0
+        self.image = self.frames[self.cur_frame]  # меняем картинки
+        self.rect = self.rect.move(x, y)
+        self.cnt = 0  # счётчик, сколько раз сменилась картинка
+
+    def cut_sheet(self, sheet, columns, rows):
+        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
+                                sheet.get_height() // rows)
+        for j in range(rows):
+            for i in range(columns):
+                frame_location = (self.rect.w * i, self.rect.h * j)
+                self.frames.append(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)))
+
+    def update(self):
+        self.cnt += 1
+        if self.cnt == self.klv:  # если объект - спецэффект и он полностью показался, то удаляется
+            self.kill()
+        self.cur_frame = (self.cur_frame + 1) % len(self.frames)
+        self.image = self.frames[self.cur_frame]
+
+
 class Timer:  # класс для засекания времени
     def __init__(self, time_max):  # подаем время, на которое засекаем таймер
         self.time_max = time_max
@@ -41,7 +69,8 @@ def load_image(name, colorkey=None):  # функция для загрузки �
 
 # словарь с изображениями
 images = {
-    'wall': pygame.transform.scale(load_image('box.png'), (tile_width, tile_height)),  # стена
+    'wall': pygame.transform.scale(load_image('WallTriggerable2.png'), (tile_width, tile_height)),  # стена
+    'wallTrig': pygame.transform.scale(load_image('WallTriggerable1.png'), (tile_width, tile_height)),  # стена
     'grass': pygame.transform.scale(load_image('grass.png'), (tile_width, tile_height)),  # зеленый фон, трава
     'bullet': load_image('bullet.png'),  # пуля
     'close_attack': load_image('attack2.png'),  # ближняя атака монстра
@@ -70,7 +99,7 @@ images = {
     'teleport1': pygame.transform.scale(load_image('teleport1.png'), (tile_width, tile_height)),  # неактивный телепорт
     'teleport_win': pygame.transform.scale(load_image('teleport_win.png'), (tile_width, tile_height)),
     # телепорт при полном прохождении игры
-    'key': pygame.transform.scale(load_image('key.png'), (tile_width, tile_height)),
+    'key': pygame.transform.scale(load_image('teleport.png'), (tile_width, tile_height)),
     # ключик, в моем коде ключ не работает, картинку нужно заменить
     'Jevel': pygame.transform.scale(load_image('Jewel.png'), (tile_width, tile_height)),  # сокровище
     'blast': load_image('blast.png'),  # магический выстрел
@@ -82,7 +111,7 @@ images = {
     'bomb': load_image('bomb2.png'),  # бомба, оружие
     'pause': pygame.transform.scale(load_image('pause.png'), (inventory_slot_width, inventory_slot_width)),  # пауза
     'snare': load_image('snare.png'),  # ловушка,
-    'heal_zone': pygame.transform.scale(load_image('cross_heal.png'), (tile_width, tile_height))  # ловушка,
+    'heal_zone': pygame.transform.scale(load_image('heal_zone.png'), (tile_width, tile_height))  # ловушка,
 }
 FPS = 60  # кол-во тиков в секунду
 
@@ -464,6 +493,7 @@ class Teleport(BackgroundTile):  # класс телепорта
     def type(self):
         return 'empty'
 
+
 class HealZone(BackgroundTile):  # класс телепорта
     def __init__(self, pos_x, pos_y):
         super().__init__(pos_x, pos_y)  # положение
@@ -502,6 +532,7 @@ class Wall(pygame.sprite.Sprite):  # класс стены
         self.rect = self.image.get_rect().move(  # положение на экране
             tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
+        self.im = ''
 
     def type(self):  # возвращает строку типа спрайта, нужно для использования спрайтов в матрице
         return 'wall'
@@ -510,13 +541,14 @@ class Wall(pygame.sprite.Sprite):  # класс стены
 class WallTriggerable(Wall):  # разрушаемая стена. Разрушается при смерти monster2
     def __init__(self, pos_x, pos_y, key_trigger, monster_trigger):
         super().__init__(pos_x, pos_y)
-        self.image = images['wall']
+        self.image = images['wallTrig']
         self.pos_x, self.pos_y = pos_x, pos_y
         self.status = True  # для разрушения стен
         self.key_trigger, self.monster_trigger = key_trigger, monster_trigger
 
     def update(self):
-        if (len(guard_monster_group) == 0 or not self.monster_trigger) and (keys_not_collected == 0 or not self.key_trigger):  # если все monster2 мертвы, то стены рушатся
+        if (len(guard_monster_group) == 0 or not self.monster_trigger) and (
+                keys_not_collected == 0 or not self.key_trigger):  # если все monster2 мертвы, то стены рушатся
             self.status = False
             self.image = images['grass']
 
@@ -715,7 +747,18 @@ class Monster(pygame.sprite.Sprite):
         #                           rang=2.25)  # изменяемый
         weapon.owner = self
         weapon.fraction = monster_group  # чтобы не бил своих и не получал урона от ловушек
-        self.weapon = weapon
+        self.action = 'standing'  # действие моба. изначально он стоит
+        self.near_player = False
+        self.weapon = weapon  # оружие, требуется для выбора картинки
+        self.frames = []  # список с картинками
+        self.cur_frame = 0  # для смены картинок
+        self.cnt = 0  # счётчик, чтобы менять картинку не каждую итерацию
+        self.image = images[image_name]  # для начала ставим любую картинку, чтобы появился self.rect
+        self.rect = self.image.get_rect().move(
+            tile_width * pos_x, tile_height * pos_y)
+        if type(self.weapon) == CloseWeapon or type(self.weapon) == BulletWeapon:
+            self.set_image(type(self.weapon))
+
         self.hp_max = hp_max
         self.hp = self.hp_max
         self.rang_min = rang_min  # радиус, в котором монстр нападёт на тебя
@@ -729,8 +772,6 @@ class Monster(pygame.sprite.Sprite):
         self.x_move, self.y_move = 0, 0
         self.pos_x, self.pos_y = pos_x, pos_y
         super().__init__(monster_group, all_sprites, entity_group, *dop_groups)
-        self.rect = self.image.get_rect().move(
-            tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
         self.next_cell = 0, 0
         self.x, self.y = self.rect.topleft
@@ -748,6 +789,51 @@ class Monster(pygame.sprite.Sprite):
         return 'monster'
 
     def update(self):
+        self.cnt += 1
+        # данный кусок для анимаций
+        if self.cnt % 10 == 0:  # каждые 10 тиков меняем картинку
+            if type(self.weapon) == CloseWeapon:
+                if self.near_player and self.action != 'attack':  # если враг рядом, анимация ударов
+                    self.action = 'attack'
+                    self.set_image(type(self.weapon))
+                if self.action == 'attack' and self.near_player:
+                    self.cur_frame = (self.cur_frame + 1) % len(self.frames)  # меняем картинку
+                    self.image = self.frames[self.cur_frame]  # устанавливаем картинку
+                elif not self.state:  # если моб не двигается и он ближнего боя (пока что описаны только такие)
+                    if self.action == 'standing':  # если стоит
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames)  # меняем картинку
+                        self.image = self.frames[self.cur_frame]  # устанавливаем картинку
+                    else:
+                        self.action = 'standing'
+                        self.set_image(type(self.weapon))
+                elif self.state:
+                    if self.action == 'running':
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames)  # меняем картинку
+                        self.image = self.frames[self.cur_frame]  # устанавливаем картинку
+                    else:  # для смены пачки картинок
+                        self.action = 'running'
+                        self.set_image(type(self.weapon))
+            elif type(self.weapon) == BulletWeapon:
+                if self.near_player and self.action != 'attack':  # если враг рядом, анимация ударов
+                    self.action = 'attack'
+                    self.set_image(type(self.weapon))
+                if self.action == 'attack' and self.near_player:
+                    self.cur_frame = (self.cur_frame + 1) % len(self.frames)  # меняем картинку
+                    self.image = self.frames[self.cur_frame]  # устанавливаем картинку
+                elif not self.state:  # если моб не двигается и он ближнего боя (пока что описаны только такие)
+                    if self.action == 'standing':  # если стоит
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames)  # меняем картинку
+                        self.image = self.frames[self.cur_frame]  # устанавливаем картинку
+                    else:
+                        self.action = 'standing'
+                        self.set_image(type(self.weapon))
+                elif self.state:
+                    if self.action == 'running':
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames)  # меняем картинку
+                        self.image = self.frames[self.cur_frame]  # устанавливаем картинку
+                    else:  # для смены пачки картинок
+                        self.action = 'running'
+                        self.set_image(type(self.weapon))
         if self.path is None:
             self.path = board.get_path(self.pos_x, self.pos_y, player.pos_x, player.pos_y)
         if self.timer_x.time == 0 and self.timer_y.time == 0 and abs(
@@ -768,6 +854,7 @@ class Monster(pygame.sprite.Sprite):
                                                 fraction=monster_group,
                                                 field=self.weapon.bullet_size[0] if type(self.weapon) in (
                                                 BulletWeapon, BombWeapon) else 3, go_through_entities=True)
+                self.near_player = False
                 self.coords_old = self.pos_x, self.pos_y
             elif not (not self.state and self.state_new and cond):
                 self.state_new = self.state
@@ -850,6 +937,37 @@ class Monster(pygame.sprite.Sprite):
             #         print(self.pos_x, self.pos_y, a.rect.x, a.rect.y)
             self.kill()
 
+    def set_image(self, weapon):
+        if weapon == CloseWeapon:
+            if self.action == 'standing':  # моб неактивен
+                self.cut_sheet(pygame.transform.scale(load_image('close_mob2.png'), (350, 50)), 7, 1)  # режем на квадратики по слайдам, функция
+            elif self.action == 'running':  # моб бежит
+                self.cut_sheet(pygame.transform.scale(load_image('running_close_mob2.png'), (350, 50)), 7,
+                               1)  # режем на квадратики по слайдам
+            elif self.action == 'attack':  # моб атакует
+                self.cut_sheet(pygame.transform.scale(load_image('attack_close_mob.png'), (350, 50)), 7,
+                               1)
+        elif weapon == BulletWeapon:
+            if self.action == 'standing':  # моб неактивен
+                self.cut_sheet(pygame.transform.scale(load_image('bullet_mob.png'), (250, 50)), 5, 1)  # режем на квадратики по слайдам, функция
+            elif self.action == 'running':  # моб бежит
+                self.cut_sheet(pygame.transform.scale(load_image('running_bullet_mob.png'), (250, 50)), 5,
+                               1)  # режем на квадратики по слайдам
+            elif self.action == 'attack':  # дальний моб атакует
+                self.cut_sheet(pygame.transform.scale(load_image('attack_bullet_mob.png'), (250, 50)), 5,
+                               1)
+        self.image = self.frames[self.cur_frame]  # устанавливаем начальную картинку
+
+    def cut_sheet(self, sheet, columns, rows):  # режем на квадратики по слайдам
+        self.frames = []
+        self.rect = pygame.Rect(self.rect.x, self.rect.y, sheet.get_width() // columns,
+                                sheet.get_height() // rows)
+        for j in range(rows):
+            for i in range(columns):
+                frame_location = (self.rect.w * i, self.rect.h * j)
+                self.frames.append(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)))
+
 
 class Necromancer(Monster):
     def __init__(self, *args, spawn_time, **kwargs):
@@ -908,6 +1026,7 @@ class Bullet(pygame.sprite.Sprite):  # дальняя атака
         self.rect.y += self.y1 - old_y
         for i in entity_group:  # проверка на столкновение с монстрами
             if pygame.sprite.collide_mask(self, i) and i not in self.fraction:  # если не свои
+                boom = AnimatedSprite(load_image("babax2.png"), 9, 8, self.rect.x - 40, self.rect.y - 10, 72)
                 i.damage(self.dmg)
                 if not self.go_through:  # если можем пролететь
                     self.kill()
@@ -1501,6 +1620,7 @@ while True:
         direction = [0, 0]
     is_start = False
     game_running = True
+    animation_group = pygame.sprite.Group()
     all_sprites = pygame.sprite.Group()
     player_group = pygame.sprite.Group()
     entity_group = pygame.sprite.Group()
@@ -1670,6 +1790,7 @@ while True:
                     weapon_group.update()
                     tiles_group.update()
                     camera.update(player)
+                    animation_group.update()
                     for sprite in all_sprites:
                         if sprite not in static_sprites:
                             camera.apply(sprite)
@@ -1692,6 +1813,7 @@ while True:
                     for i in entity_group:  # всем сущностям и герою выводим полоску хп
                         draw_hp(i)
                     # обновляем инвентарь
+                    animation_group.draw(screen)
                     static_sprites.draw(screen)
                     inventory.quantity_rendering()
                     clock.tick(FPS)
