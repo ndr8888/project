@@ -113,7 +113,7 @@ images = {
     'bomb': load_image('bomb2.png'),  # бомба, оружие
     'pause': pygame.transform.scale(load_image('pause.png'), (inventory_slot_width, inventory_slot_width)),  # пауза
     'snare': load_image('snare.png'),  # ловушка,
-    'heal_zone': pygame.transform.scale(load_image('heal_zone.png'), (tile_width, tile_height))  # ловушка,
+    'heal_zone': pygame.transform.scale(load_image('ambulance.jpg'), (tile_width, tile_height))  # востановительный центр,
 }
 FPS = 60  # кол-во тиков в секунду
 
@@ -270,8 +270,10 @@ def start_screen():  # начальное окно
 
 def win_screen():  # окно победы, принцип тот же, что и в функции выше
     direction = [0, 0]
+    a = [f'Карта {i}: {sum([j for j in level_counters[i]]) // 3600} мин {sum([j for j in level_counters[i]]) % 3600 // 60} сек' for i in range(len(level_counters))]
     intro_text = ["ИГРА ПРОЙДЕНА",
-                  f"Время: {time_counter // 3600} мин {time_counter % 3600 // 60} сек"]
+                  f"Время: {time_counter // 3600} мин {time_counter % 3600 // 60} сек",
+                  "Всего:"] + a
 
     # fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
     # screen.blit(fon, (0, 0))
@@ -938,13 +940,13 @@ class Monster(pygame.sprite.Sprite):
     def set_image(self, weapon):
         if weapon == CloseWeapon:
             if self.action == 'standing':  # моб неактивен
-                self.cut_sheet(pygame.transform.scale(load_image('close_mob1.png'), (350, 50)), 7, 1)  # режем на квадратики по слайдам, функция
+                self.cut_sheet(pygame.transform.scale(load_image('close_mob2.png'), (350, 50)), 7, 1)  # режем на квадратики по слайдам, функция
             elif self.action == 'attack':  # моб атакует
                 self.cut_sheet(pygame.transform.scale(load_image('attack_close_mob.png'), (350, 50)), 7,
                                1)
         elif weapon == BulletWeapon:
             if self.action == 'standing':  # моб неактивен
-                self.cut_sheet(pygame.transform.scale(load_image('bullet_mob1.png'), (250, 50)), 5, 1)  # режем на квадратики по слайдам, функция
+                self.cut_sheet(pygame.transform.scale(load_image('bullet_mob.png'), (250, 50)), 5, 1)  # режем на квадратики по слайдам, функция
             elif self.action == 'running':  # моб бежит
                 self.cut_sheet(pygame.transform.scale(load_image('running_bullet_mob.png'), (250, 50)), 5,
                                1)  # режем на квадратики по слайдам
@@ -1643,6 +1645,7 @@ while True:
     weapon_group = pygame.sprite.Group()
     player = Player(0, 0)
     time_counter = 0
+    level_counters = [[0 for _ in range(i)] for i in [1, 1, 1, 3, 3]]
     is_won = False
     weapon_lst = [CloseWeapon('sword', 'close_attack1', -50, -50, player, player_group, 20, FPS // 2,
                               rang=4, name='меч')]
@@ -1699,6 +1702,7 @@ while True:
                                          'pause')  # справа снизу
                 while level_running and life_running:
                     time_counter += 1  # для вывода времени
+                    level_counters[int(map_num // 1)][int(map_num % 1 * 10)] += 1
                     # изменяем ракурс камеры
                     # внутри игрового цикла ещё один цикл
                     # приёма и обработки сообщений
