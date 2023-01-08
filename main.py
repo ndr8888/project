@@ -1032,12 +1032,13 @@ class Bullet(pygame.sprite.Sprite):  # дальняя атака
         self.rect.y += self.y1 - old_y
         for i in entity_group:  # проверка на столкновение с монстрами
             if pygame.sprite.collide_mask(self, i) and i not in self.fraction:  # если не свои
-                boom = AnimatedSprite(load_image("babax2.png"), 9, 8, self.rect.x - 40, self.rect.y - 10, 72)
+                boom = AnimatedSprite(load_image("babax2.png"), 9, 8, self.rect.x - 10, self.rect.y - 10, 72)
                 i.damage(self.dmg)
                 if not self.go_through:  # если можем пролететь
                     self.kill()
         for i in wall_group:  # проверка на столкновение со стенами
             if pygame.sprite.collide_mask(self, i):
+                boom = AnimatedSprite(load_image("babax2.png"), 9, 8, self.rect.x - 10, self.rect.y - 10, 72)
                 self.kill()
         self.live_timer.tick(self.vel)
         if self.live_timer.time == 0:
