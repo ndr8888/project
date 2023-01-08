@@ -101,7 +101,7 @@ images = {
     'teleport1': pygame.transform.scale(load_image('teleport1.png'), (tile_width, tile_height)),  # неактивный телепорт
     'teleport_win': pygame.transform.scale(load_image('teleport_win.png'), (tile_width, tile_height)),
     # телепорт при полном прохождении игры
-    'key': pygame.transform.scale(load_image('teleport.png'), (tile_width, tile_height)),
+    'key': pygame.transform.scale(load_image('key.png'), (tile_width, tile_height)),
     # ключик, в моем коде ключ не работает, картинку нужно заменить
     'Jevel': pygame.transform.scale(load_image('Jewel.png'), (tile_width, tile_height)),  # сокровище
     'blast': load_image('blast.png'),  # магический выстрел
@@ -802,14 +802,14 @@ class Monster(pygame.sprite.Sprite):
                 if self.action == 'attack' and self.near_player:
                     self.cur_frame = (self.cur_frame + 1) % len(self.frames)  # меняем картинку
                     self.image = self.frames[self.cur_frame]  # устанавливаем картинку
-                elif not self.state:  # если моб не двигается и он ближнего боя (пока что описаны только такие)
+                elif (self.timer_x.time == 0 and self.timer_y.time == 0):  # если моб не двигается и он ближнего боя (пока что описаны только такие)
                     if self.action == 'standing':  # если стоит
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames)  # меняем картинку
                         self.image = self.frames[self.cur_frame]  # устанавливаем картинку
                     else:
                         self.action = 'standing'
                         self.set_image(type(self.weapon))
-                elif self.state:
+                elif not (self.timer_x.time == 0 and self.timer_y.time == 0):
                     if self.action == 'running':
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames)  # меняем картинку
                         self.image = self.frames[self.cur_frame]  # устанавливаем картинку
@@ -823,14 +823,14 @@ class Monster(pygame.sprite.Sprite):
                 if self.action == 'attack' and self.near_player:
                     self.cur_frame = (self.cur_frame + 1) % len(self.frames)  # меняем картинку
                     self.image = self.frames[self.cur_frame]  # устанавливаем картинку
-                elif not self.state:  # если моб не двигается и он ближнего боя (пока что описаны только такие)
+                elif (self.timer_x.time == 0 and self.timer_y.time == 0):  # если моб не двигается и он ближнего боя (пока что описаны только такие)
                     if self.action == 'standing':  # если стоит
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames)  # меняем картинку
                         self.image = self.frames[self.cur_frame]  # устанавливаем картинку
                     else:
                         self.action = 'standing'
                         self.set_image(type(self.weapon))
-                elif self.state:
+                elif not (self.timer_x.time == 0 and self.timer_y.time == 0):
                     if self.action == 'running':
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames)  # меняем картинку
                         self.image = self.frames[self.cur_frame]  # устанавливаем картинку
@@ -953,7 +953,7 @@ class Monster(pygame.sprite.Sprite):
             elif self.action == 'attack':  # моб атакует
                 self.cut_sheet(pygame.transform.scale(load_image('attack_close_mob.png'), (350, 50)), 7,
                                1)
-        elif weapon == BulletWeapon:
+        elif weapon == BulletWeapon or weapon == BombWeapon:
             if self.action == 'standing':  # моб неактивен
                 self.cut_sheet(pygame.transform.scale(load_image('bullet_mob.png'), (250, 50)), 5,
                                1)  # режем на квадратики по слайдам, функция
@@ -1044,7 +1044,7 @@ class Bullet(pygame.sprite.Sprite):  # дальняя атака
         self.rect.y += self.y1 - old_y
         for i in entity_group:  # проверка на столкновение с монстрами
             if pygame.sprite.collide_mask(self, i) and i not in self.fraction:  # если не свои
-                boom = AnimatedSprite(load_image("babax2.png"), 9, 8, self.rect.x - 40, self.rect.y - 10, 72)
+                boom = AnimatedSprite(load_image("babax2.png"), 9, 8, self.rect.x - 10, self.rect.y - 10, 72)
                 i.damage(self.dmg)
                 if not self.go_through:  # если можем пролететь
                     self.kill()
