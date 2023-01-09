@@ -945,13 +945,13 @@ class Monster(pygame.sprite.Sprite):
     def set_image(self, weapon):
         if weapon == CloseWeapon:
             if self.action == 'standing':  # моб неактивен
-                self.cut_sheet(pygame.transform.scale(load_image('close_mob2.png'), (350, 50)), 7, 1)  # режем на квадратики по слайдам, функция
+                self.cut_sheet(pygame.transform.scale(load_image('close_mob1.png'), (350, 50)), 7, 1)  # режем на квадратики по слайдам, функция
             elif self.action == 'attack':  # моб атакует
                 self.cut_sheet(pygame.transform.scale(load_image('attack_close_mob.png'), (350, 50)), 7,
                                1)
         elif weapon == BulletWeapon:
             if self.action == 'standing':  # моб неактивен
-                self.cut_sheet(pygame.transform.scale(load_image('bullet_mob.png'), (250, 50)), 5, 1)  # режем на квадратики по слайдам, функция
+                self.cut_sheet(pygame.transform.scale(load_image('bullet_mob1.png'), (250, 50)), 5, 1)  # режем на квадратики по слайдам, функция
             elif self.action == 'running':  # моб бежит
                 self.cut_sheet(pygame.transform.scale(load_image('running_bullet_mob.png'), (250, 50)), 5,
                                1)  # режем на квадратики по слайдам
@@ -1645,7 +1645,7 @@ while True:
                               rang=4, name='меч')]
     cheats = False
 
-    for map_num, map_name in (enumerate(['map.txt', 'map1.txt', 'map2.txt', 'map3', 'map4'])):
+    for map_num, map_name in enumerate(['map.txt', 'map1.txt', 'map2.txt', 'map3', 'map4']):
         level_running = True
         save_potions = [hp_potions, rage_potions]
         save_hp = player.hp
