@@ -129,8 +129,9 @@ def start_screen():  # начальное окно
     # текст
     intro_text = ["ЗАСТАВКА", "",
                   "Правила игры",
-                  "Если в правилах несколько строк,",
-                  "приходится выводить их построчно"]
+                  "Управление - WASD",
+                  "Смена оружий - 12345, зелья - QE",
+                  "0 - читы"]
 
     # fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
     # screen.blit(fon, (0, 0))
@@ -944,9 +945,9 @@ class Monster(pygame.sprite.Sprite):
     def set_image(self, weapon):
         if weapon == CloseWeapon:
             if self.action == 'standing':  # моб неактивен
-                self.cut_sheet(pygame.transform.scale(load_image('close_mob1.png'), (350, 50)), 7, 1)  # режем на квадратики по слайдам, функция
+                self.cut_sheet(pygame.transform.scale(load_image('close_mob2.png'), (200, 50)), 4, 1)  # режем на квадратики по слайдам, функция
             elif self.action == 'attack':  # моб атакует
-                self.cut_sheet(pygame.transform.scale(load_image('attack_close_mob.png'), (350, 50)), 7,
+                self.cut_sheet(pygame.transform.scale(load_image('attack_close_mob1.png'), (200, 50)), 4,
                                1)
         elif weapon == BulletWeapon:
             if self.action == 'standing':  # моб неактивен
