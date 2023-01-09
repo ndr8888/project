@@ -132,11 +132,11 @@ def start_screen():  # начальное окно
                   "Если в правилах несколько строк,",
                   "приходится выводить их построчно"]
 
-    # fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
-    # screen.blit(fon, (0, 0))
     # цикл работы
+    fon = pygame.transform.scale(load_image('fon1.png'), (WIDTH, HEIGHT))
     while True:
-        screen.fill((0, 0, 0))
+        screen.blit(fon, (0, 0))
+
         text_coords = [10, 50]  # положение строки
         font = pygame.font.Font(None, 25)  # размер шрифта
         for line in intro_text:  # выводим построчно
@@ -279,11 +279,10 @@ def win_screen():  # окно победы, принцип тот же, что �
                   f"Время: {time_counter // 3600} мин {time_counter % 3600 // 60} сек",
                   "Всего:"] + a
 
-    # fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
-    # screen.blit(fon, (0, 0))
-
+    fon = pygame.transform.scale(load_image('fon1.png'), (WIDTH, HEIGHT))
     while True:
-        screen.fill((0, 0, 0))
+        screen.blit(fon, (0, 0))
+
         text_coords = [10, 100]
         font = pygame.font.Font(None, 30)
         for line in intro_text:
@@ -352,9 +351,10 @@ def pause_screen():  # окно паузы, принцип тот же, что �
     # fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
     # screen.blit(fon, (0, 0))
     text_coord = 50
+    fon = pygame.transform.scale(load_image('fon1.png'), (WIDTH, HEIGHT))
 
     while True:
-        screen.fill((0, 0, 0))
+        screen.blit(fon, (0, 0))
         text_coords = [WIDTH // 2, HEIGHT // 2 - 150]
         font = pygame.font.Font(None, 50)
         for line in intro_text:
