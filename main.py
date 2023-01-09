@@ -114,6 +114,7 @@ images = {
     'pause': pygame.transform.scale(load_image('pause.png'), (inventory_slot_width, inventory_slot_width)),  # пауза
     'snare': load_image('snare.png'),  # ловушка,
     'heal_zone': pygame.transform.scale(load_image('heal_zone.png'), (tile_width, tile_height))  # востановительный центр,
+    # FileNotFoundError: file 'heal_zone.png' is not found
 }
 FPS = 60  # кол-во тиков в секунду
 
