@@ -946,12 +946,13 @@ class Monster(pygame.sprite.Sprite):
                                1)
         elif weapon == BulletWeapon:
             if self.action == 'standing':  # моб неактивен
-                self.cut_sheet(pygame.transform.scale(load_image('bullet_mob1.png'), (250, 50)), 5, 1)  # режем на квадратики по слайдам, функция
+                self.cut_sheet(pygame.transform.scale(load_image('bullet_mob2.png'), (165, 25)), 5, 1)  # режем на квадратики по слайдам, функция
             elif self.action == 'running':  # моб бежит
-                self.cut_sheet(pygame.transform.scale(load_image('running_bullet_mob.png'), (250, 50)), 5,
+                self.cut_sheet(pygame.transform.scale(load_image('running_bullet_mob1.png'), (140, 25)), 5,
                                1)  # режем на квадратики по слайдам
+                print(1)
             elif self.action == 'attack':  # дальний моб атакует
-                self.cut_sheet(pygame.transform.scale(load_image('attack_bullet_mob.png'), (250, 50)), 5,
+                self.cut_sheet(pygame.transform.scale(load_image('attack_bullet_mob1.png'), (165, 25)), 5,
                                1)
         self.image = self.frames[self.cur_frame]  # устанавливаем начальную картинку
 
@@ -962,8 +963,8 @@ class Monster(pygame.sprite.Sprite):
         for j in range(rows):
             for i in range(columns):
                 frame_location = (self.rect.w * i, self.rect.h * j)
-                self.frames.append(sheet.subsurface(pygame.Rect(
-                    frame_location, self.rect.size)))
+                self.frames.append(pygame.transform.scale(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)), (tile_width, tile_height)))
 
 
 class Necromancer(Monster):
