@@ -272,9 +272,8 @@ def start_screen():  # начальное окно
 def win_screen():  # окно победы, принцип тот же, что и в функции выше
     direction = [0, 0]
     a = [
-        f'Карта {i}: {sum([j for j in level_counters[i]]) // 3600} мин ' +
-        f'{sum([j for j in level_counters[i]]) % 3600 // 60} сек ' +
-        f'{sum([j for j in level_counters[i]]) % 60 * 1000 // 60} миллисек'
+        f'Уровень {i + 1}: {sum([j for j in level_counters[i]]) // 3600} мин ' +
+        f'{sum([j for j in level_counters[i]]) % 3600 // 60} сек '
         for i in range(len(level_counters))]
     intro_text = ["ИГРА ПРОЙДЕНА",
                   f"Время: {time_counter // 3600} мин {time_counter % 3600 // 60} сек",
@@ -1603,7 +1602,7 @@ class Inventory:  # класс иневентаря. В игре он снизу
             inventory_slot_width - 8, HEIGHT - inventory_slot_width - 14))  # выводим зеленым шрифтом цифру 1
         t = sum([j for j in level_counters[int(map_num // 1)]])
         text = font_for_inventory.render(
-            f'Карта {map_num}: {t // 3600} мин, {t % 3600 // 60} сек, {t % 60 * 1000 // 60} миллисек',
+            f'Уровень {map_num + 1}: {t // 3600} мин, {t % 3600 // 60} сек',
             True, (127, 127, 0)
         )
         screen.blit(text, (32, 32))  # выводим зеленым шрифтом цифру 1
