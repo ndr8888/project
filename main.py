@@ -113,8 +113,8 @@ images = {
     'bomb': load_image('bomb2.png'),  # бомба, оружие
     'pause': pygame.transform.scale(load_image('pause.png'), (inventory_slot_width, inventory_slot_width)),  # пауза
     'snare': load_image('snare.png'),  # ловушка,
-    'heal_zone': pygame.transform.scale(load_image('heal_zone.png'), (tile_width, tile_height))  # востановительный центр,
-    # FileNotFoundError: file 'heal_zone.png' is not found
+    'heal_zone': pygame.transform.scale(load_image('heal_zone.png'), (tile_width, tile_height))  # ловушка,
+    #FileNotFoundError: file 'heal_zone.png' is not found
 }
 FPS = 60  # кол-во тиков в секунду
 
@@ -271,7 +271,11 @@ def start_screen():  # начальное окно
 
 def win_screen():  # окно победы, принцип тот же, что и в функции выше
     direction = [0, 0]
-    a = [f'Карта {i}: {sum([j for j in level_counters[i]]) // 3600} мин {sum([j for j in level_counters[i]]) % 3600 // 60} сек' for i in range(len(level_counters))]
+    a = [
+        f'Карта {i}: {sum([j for j in level_counters[i]]) // 3600} мин ' +
+        f'{sum([j for j in level_counters[i]]) % 3600 // 60} сек ' +
+        f'{sum([j for j in level_counters[i]]) % 60 * 1000 // 60} миллисек'
+        for i in range(len(level_counters))]
     intro_text = ["ИГРА ПРОЙДЕНА",
                   f"Время: {time_counter // 3600} мин {time_counter % 3600 // 60} сек",
                   "Всего:"] + a
@@ -941,13 +945,13 @@ class Monster(pygame.sprite.Sprite):
     def set_image(self, weapon):
         if weapon == CloseWeapon:
             if self.action == 'standing':  # моб неактивен
-                self.cut_sheet(pygame.transform.scale(load_image('close_mob1.png'), (350, 50)), 7, 1)  # режем на квадратики по слайдам, функция
+                self.cut_sheet(pygame.transform.scale(load_image('close_mob2.png'), (350, 50)), 7, 1)  # режем на квадратики по слайдам, функция
             elif self.action == 'attack':  # моб атакует
                 self.cut_sheet(pygame.transform.scale(load_image('attack_close_mob.png'), (350, 50)), 7,
                                1)
         elif weapon == BulletWeapon:
             if self.action == 'standing':  # моб неактивен
-                self.cut_sheet(pygame.transform.scale(load_image('bullet_mob1.png'), (250, 50)), 5, 1)  # режем на квадратики по слайдам, функция
+                self.cut_sheet(pygame.transform.scale(load_image('bullet_mob.png'), (250, 50)), 5, 1)  # режем на квадратики по слайдам, функция
             elif self.action == 'running':  # моб бежит
                 self.cut_sheet(pygame.transform.scale(load_image('running_bullet_mob.png'), (250, 50)), 5,
                                1)  # режем на квадратики по слайдам
@@ -1494,22 +1498,22 @@ class Board:  # класс матрицы доски
         while x != x1 or y != y1:
             if player.x_move == 0:
                 if 0 <= x - 1 < self.width and 0 <= y < self.height and matrix[x - 1][y] == n - 1:
-                    x = x - 1
+                    x -= 1
                 if 0 <= x + 1 < self.width and 0 <= y < self.height and matrix[x + 1][y] == n - 1:
-                    x = x + 1
+                    x += 1
                 if 0 <= x < self.width and 0 <= y - 1 < self.height and matrix[x][y - 1] == n - 1:
-                    y = y - 1
+                    y -= 1
                 if 0 <= x < self.width and 0 <= y + 1 < self.height and matrix[x][y + 1] == n - 1:
-                    y = y + 1
+                    y += 1
             else:
                 if 0 <= x < self.width and 0 <= y + 1 < self.height and matrix[x][y + 1] == n - 1:
-                    y = y + 1
+                    y += 1
                 if 0 <= x < self.width and 0 <= y - 1 < self.height and matrix[x][y - 1] == n - 1:
-                    y = y - 1
+                    y -= 1
                 if 0 <= x + 1 < self.width and 0 <= y < self.height and matrix[x + 1][y] == n - 1:
-                    x = x + 1
+                    x += 1
                 if 0 <= x - 1 < self.width and 0 <= y < self.height and matrix[x - 1][y] == n - 1:
-                    x = x - 1
+                    x -= 1
             lst.append((x, y))
             n -= 1
         return lst[::-1]
@@ -1590,29 +1594,18 @@ class Inventory:  # класс иневентаря. В игре он снизу
         text = font_for_inventory.render(f"{rage_potions}", True, (255, 0, 0))  # кол-во зелий ярости
         screen.blit(text, (inventory_slot_width * 7 + 5, HEIGHT - 12))  # выводим кол-во зелий ярости около зелья ярости
 
-        text = font_for_inventory.render(f"{1}", True, (0, 255, 0))  # зелье хп активируется при нажатии на 1
+        text = font_for_inventory.render(
+            "1             2             3             4             5" +
+            "               E            Q", True, (0, 255, 0)
+        )  # для сохранения места в памяти и коде
         screen.blit(text, (
-            inventory_slot_width * 1 - 8, HEIGHT - inventory_slot_width - 14))  # выводим зеленым шрифтом цифру 1
-        text = font_for_inventory.render(f"{2}", True, (0, 255, 0))  # зелье хп активируется при нажатии на 1
-        screen.blit(text, (
-            inventory_slot_width * 2 - 8, HEIGHT - inventory_slot_width - 14))  # выводим зеленым шрифтом цифру 1
-        text = font_for_inventory.render(f"{3}", True, (0, 255, 0))  # зелье хп активируется при нажатии на 1
-        screen.blit(text, (
-            inventory_slot_width * 3 - 8, HEIGHT - inventory_slot_width - 14))  # выводим зеленым шрифтом цифру 1
-        text = font_for_inventory.render(f"{4}", True, (0, 255, 0))  # зелье хп активируется при нажатии на 1
-        screen.blit(text, (
-            inventory_slot_width * 4 - 8, HEIGHT - inventory_slot_width - 14))  # выводим зеленым шрифтом цифру 1
-        text = font_for_inventory.render(f"{5}", True, (0, 255, 0))  # зелье хп активируется при нажатии на 1
-        screen.blit(text, (
-            inventory_slot_width * 5 - 8, HEIGHT - inventory_slot_width - 14))  # выводим зеленым шрифтом цифру 1
-
-        text = font_for_inventory.render(f"E", True, (0, 255, 0))  # зелье хп активируется при нажатии на 1
-        screen.blit(text, (
-            inventory_slot_width * 6 + 2, HEIGHT - inventory_slot_width - 14))  # выводим зеленым шрифтом цифру 1
-        text = font_for_inventory.render(f"Q", True, (0, 255, 0))  # зелье хп активируется при нажатии на 1
-        screen.blit(text, (
-            inventory_slot_width * 7 + 2, HEIGHT - inventory_slot_width - 14))  # выводим зеленым шрифтом цифру 1
-
+            inventory_slot_width - 8, HEIGHT - inventory_slot_width - 14))  # выводим зеленым шрифтом цифру 1
+        t = sum([j for j in level_counters[int(map_num // 1)]])
+        text = font_for_inventory.render(
+            f'Карта {map_num}: {t // 3600} мин, {t % 3600 // 60} сек, {t % 60 * 1000 // 60} миллисек',
+            True, (127, 127, 0)
+        )
+        screen.blit(text, (32, 32))  # выводим зеленым шрифтом цифру 1
         inventory.rage_timer.tick()  # если зелье активно, то уменьшаем время действия до 0. Иначе 0
 
 
@@ -1652,7 +1645,7 @@ while True:
                               rang=4, name='меч')]
     cheats = False
 
-    for map_num, map_name in enumerate(['map.txt', 'map1.txt', 'map2.txt', 'map3', 'map4']):
+    for map_num, map_name in (enumerate(['map.txt', 'map1.txt', 'map2.txt', 'map3', 'map4'])):
         level_running = True
         save_potions = [hp_potions, rage_potions]
         save_hp = player.hp
