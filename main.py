@@ -1703,23 +1703,23 @@ while True:
                         if event.type == pygame.KEYDOWN and event.key == pygame.K_1:
                             inventory.current_slot = 0
                             inventory.weapon_frame.rect.x = 0
-                            player.change_weapon(0)
+                            player.change_weapon(inventory.current_slot)
                         if event.type == pygame.KEYDOWN and event.key == pygame.K_2 and len(weapon_lst) >= 2:
                             inventory.current_slot = 1
                             inventory.weapon_frame.rect.x = inventory_slot_width
-                            player.change_weapon(1)
+                            player.change_weapon(inventory.current_slot)
                         if event.type == pygame.KEYDOWN and event.key == pygame.K_3 and len(weapon_lst) >= 3:
                             inventory.current_slot = 2
                             inventory.weapon_frame.rect.x = inventory_slot_width * 2
-                            player.change_weapon(2)
+                            player.change_weapon(inventory.current_slot)
                         if event.type == pygame.KEYDOWN and event.key == pygame.K_4 and len(weapon_lst) >= 4:
                             inventory.current_slot = 3
                             inventory.weapon_frame.rect.x = inventory_slot_width * 3
-                            player.change_weapon(3)
+                            player.change_weapon(inventory.current_slot)
                         if event.type == pygame.KEYDOWN and event.key == pygame.K_5 and len(weapon_lst) >= 5:
                             inventory.current_slot = 4
                             inventory.weapon_frame.rect.x = inventory_slot_width * 4
-                            player.change_weapon(4)
+                            player.change_weapon(inventory.current_slot)
                         # Esc = пауза
                         if (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE) or (
                                 event.type == pygame.MOUSEBUTTONDOWN and pause_btn.rect.x < event.pos[
@@ -1747,9 +1747,11 @@ while True:
                             if inventory.current_slot != 0:
                                 inventory.current_slot -= 1
                                 inventory.weapon_frame.rect.x -= inventory_slot_width
+                                player.change_weapon(inventory.current_slot)
                             else:
                                 inventory.current_slot = len(weapon_lst) - 1
                                 inventory.weapon_frame.rect.x = inventory_slot_width * (len(weapon_lst) - 1)
+                                player.change_weapon(inventory.current_slot)
                         if event.type == pygame.KEYDOWN and event.key == pygame.K_q:  # активирует зелье урона
                             inventory.plus_damage()
 
@@ -1757,9 +1759,11 @@ while True:
                             if inventory.current_slot != len(weapon_lst) - 1:
                                 inventory.current_slot += 1
                                 inventory.weapon_frame.rect.x += inventory_slot_width
+                                player.change_weapon(inventory.current_slot)
                             else:
                                 inventory.current_slot = 0
                                 inventory.weapon_frame.rect.x = 0
+                                player.change_weapon(inventory.current_slot)
 
                         if event.type == pygame.KEYDOWN:  # назначаем движение
                             if event.key == pygame.K_w:  # вверх
