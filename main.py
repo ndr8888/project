@@ -102,7 +102,7 @@ images = {
     'teleport1': pygame.transform.scale(load_image('teleport1.png'), (tile_width, tile_height)),  # неактивный телепорт
     'teleport_win': pygame.transform.scale(load_image('teleport_win.png'), (tile_width, tile_height)),
     # телепорт при полном прохождении игры
-    'key': pygame.transform.scale(load_image('teleport.png'), (tile_width, tile_height)),
+    'key': pygame.transform.scale(load_image('key.png'), (tile_width, tile_height)),
     # ключик, в моем коде ключ не работает, картинку нужно заменить
     'Jevel': pygame.transform.scale(load_image('Jewel.png'), (tile_width, tile_height)),  # сокровище
     'blast': load_image('blast.png'),  # магический выстрел
@@ -133,11 +133,11 @@ def start_screen():  # начальное окно
                   "0 - читы",
                   "Количество уровней - 5"]
 
-    # fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
-    # screen.blit(fon, (0, 0))
+    fon = random.choice(fons)
+    screen.blit(fon, (0, 0))
     # цикл работы
     while True:
-        screen.fill((0, 0, 0))
+        screen.blit(fon, (0, 0))
         text_coords = [10, 50]  # положение строки
         font = pygame.font.Font(None, 25)  # размер шрифта
         for line in intro_text:  # выводим построчно
@@ -209,11 +209,11 @@ def win_screen():  # окно победы, принцип тот же, что �
                   f"Время: {time_counter // 3600} мин {time_counter % 3600 // 60} сек",
                   "Всего:"] + a
 
-    # fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
-    # screen.blit(fon, (0, 0))
+    fon = random.choice(fons)
+    screen.blit(fon, (0, 0))
 
     while True:
-        screen.fill((0, 0, 0))
+        screen.blit(fon, (0, 0))
         text_coords = [10, 100]
         font = pygame.font.Font(None, 30)
         for line in intro_text:
@@ -279,12 +279,12 @@ def pause_screen():  # окно паузы, принцип тот же, что �
     direction = [0, 0]
     intro_text = ["ПАУЗА"]
 
-    # fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
-    # screen.blit(fon, (0, 0))
+    fon = random.choice(fons)
+    screen.blit(fon, (0, 0))
     text_coord = 50
 
     while True:
-        screen.fill((0, 0, 0))
+        screen.blit(fon, (0, 0))
         text_coords = [WIDTH // 2, HEIGHT // 2 - 150]
         font = pygame.font.Font(None, 50)
         for line in intro_text:
@@ -801,7 +801,8 @@ class Monster(pygame.sprite.Sprite):
                 if self.action == 'attack' and self.near_player:
                     self.cur_frame = (self.cur_frame + 1) % len(self.frames)  # меняем картинку
                     self.image = self.frames[self.cur_frame]  # устанавливаем картинку
-                elif (self.timer_x.time == 0 and self.timer_y.time == 0):  # если моб не двигается и он ближнего боя (пока что описаны только такие)
+                elif (
+                        self.timer_x.time == 0 and self.timer_y.time == 0):  # если моб не двигается и он ближнего боя (пока что описаны только такие)
                     if self.action == 'standing':  # если стоит
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames)  # меняем картинку
                         self.image = self.frames[self.cur_frame]  # устанавливаем картинку
@@ -829,8 +830,8 @@ class Monster(pygame.sprite.Sprite):
                 self.pos_x - player.pos_x) == self.rang_min - 1 or abs(
                 self.pos_y - player.pos_y) == self.rang_min - 1)
             if (self.player_coords_old != (player.pos_x, player.pos_y) or self.coords_old != (
-            self.pos_x, self.pos_y)) and not (self.rang_min <= abs(
-                    self.pos_x - player.pos_x) <= self.rang_max and self.rang_min <= abs(
+                    self.pos_x, self.pos_y)) and not (self.rang_min <= abs(
+                self.pos_x - player.pos_x) <= self.rang_max and self.rang_min <= abs(
                 self.pos_y - player.pos_y) <= self.rang_max):
                 self.state_new = is_linear_path(*self.rect.center, *player.rect.center, owner=self, target=player,
                                                 fraction=monster_group,
@@ -924,13 +925,15 @@ class Monster(pygame.sprite.Sprite):
     def set_image(self, weapon):
         if weapon == CloseWeapon:
             if self.action == 'standing':  # моб неактивен
-                self.cut_sheet(pygame.transform.scale(load_image('close_mob2.png'), (200, 50)), 4, 1)  # режем на квадратики по слайдам, функция
+                self.cut_sheet(pygame.transform.scale(load_image('close_mob2.png'), (200, 50)), 4,
+                               1)  # режем на квадратики по слайдам, функция
             elif self.action == 'attack':  # моб атакует
                 self.cut_sheet(pygame.transform.scale(load_image('attack_close_mob1.png'), (200, 50)), 4,
                                1)
         elif weapon == BulletWeapon:
             if self.action == 'standing':  # моб неактивен
-                self.cut_sheet(pygame.transform.scale(load_image('bullet_mob2.png'), (165, 25)), 5, 1)  # режем на квадратики по слайдам, функция
+                self.cut_sheet(pygame.transform.scale(load_image('bullet_mob2.png'), (165, 25)), 5,
+                               1)  # режем на квадратики по слайдам, функция
             elif self.action == 'running':  # моб бежит
                 self.cut_sheet(pygame.transform.scale(load_image('running_bullet_mob1.png'), (140, 25)), 5,
                                1)  # режем на квадратики по слайдам
@@ -999,7 +1002,7 @@ class Bullet(pygame.sprite.Sprite):  # дальняя атака
     def __init__(self, picture, x1, y1, x2, y2, fraction, damage, speed, rang, bullet_size, go_through):
         super().__init__(all_sprites, attack_group)
         self.go_through = go_through
-        self.image = images[picture]
+        self.image = images['blast']
         self.image = pygame.transform.scale(self.image, bullet_size)
         self.rect = self.image.get_rect().move(x1, y1)
         self.mask = pygame.mask.from_surface(self.image)
@@ -1599,6 +1602,9 @@ def draw_hp(entity):
     screen.blit(text, (entity.rect.x, entity.rect.y - text.get_height() - 20))
 
 
+fons = [pygame.transform.scale(load_image('fon1.jpg'), (WIDTH, HEIGHT)),
+        pygame.transform.scale(load_image('fon2.jpg'), (WIDTH, HEIGHT)),
+        pygame.transform.scale(load_image('fon3.jpg'), (WIDTH, HEIGHT))]
 direction, state = start_screen()  # стартовое окно
 fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
 if state == 2:  # 2я кнопка = выход из игры
