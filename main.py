@@ -83,7 +83,8 @@ images = {
     'monster1': pygame.transform.scale(load_image('enemy1.png'), (tile_width, tile_height)),  # враг дальнего боя
     'monster2': pygame.transform.scale(load_image('enemy2.png'), (tile_width, tile_height)),
     # враг-страж. При его убийстве рушатся некоторые стенки
-    'player': pygame.transform.scale(load_image('mar.png'), (tile_width, tile_height)),  # игрок
+    'player': load_image('player.png'),  # игрок
+    # 'player': pygame.transform.scale(load_image('player.png'), (tile_width, tile_height)),
     'game_over': pygame.transform.scale(load_image('gameover.png'), (WIDTH, HEIGHT)),  # конец игры из урока
     'inventory_slot': pygame.transform.scale(load_image('inventory_slot.png'),  # слот для оружий
                                              (inventory_slot_width, inventory_slot_width)),
@@ -114,7 +115,6 @@ images = {
     'pause': pygame.transform.scale(load_image('pause.png'), (inventory_slot_width, inventory_slot_width)),  # пауза
     'snare': load_image('snare.png'),  # ловушка,
     'heal_zone': pygame.transform.scale(load_image('heal_zone.png'), (tile_width, tile_height))  # ловушка,
-    #FileNotFoundError: file 'heal_zone.png' is not found
 }
 FPS = 60  # кол-во тиков в секунду
 
@@ -127,16 +127,17 @@ def terminate():  # выход из игры
 def start_screen():  # начальное окно
     direction = [0, 0]
     # текст
-    intro_text = ["ЗАСТАВКА", "",
-                  "Правила игры",
-                  "Если в правилах несколько строк,",
-                  "приходится выводить их построчно"]
+    intro_text = ["Правила игры",
+                  "Управление - WASD",
+                  "Смена оружий - 12345, зелья - QE",
+                  "0 - читы",
+                  "Количество уровней - 5"]
 
+    # fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
+    # screen.blit(fon, (0, 0))
     # цикл работы
-    fon = pygame.transform.scale(load_image('fon1.png'), (WIDTH, HEIGHT))
     while True:
-        screen.blit(fon, (0, 0))
-
+        screen.fill((0, 0, 0))
         text_coords = [10, 50]  # положение строки
         font = pygame.font.Font(None, 25)  # размер шрифта
         for line in intro_text:  # выводим построчно
@@ -198,77 +199,6 @@ def start_screen():  # начальное окно
         clock.tick(FPS)
 
 
-# def end_screen():
-#     direction = [0, 0]
-#     intro_text = ["ИГРА ОКОНЧЕНА",
-#                   f"Время: {time_counter // 3600} мин {time_counter % 3600 // 60} сек"]
-#
-#     # fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
-#     # screen.blit(fon, (0, 0))
-#
-#     while True:
-#         screen.fill((0, 0, 0))
-#         text_coords = [10, 100]
-#         font = pygame.font.Font(None, 30)
-#         for line in intro_text:
-#             string_rendered = font.render(line, 1, pygame.Color('red'))
-#             intro_rect = string_rendered.get_rect()
-#             text_coords[1] += 10
-#             intro_rect.top = text_coords[1]
-#             # intro_rect.x = text_coords[0] - intro_rect.w // 2
-#             intro_rect.x = text_coords[0]
-#             text_coords[1] += intro_rect.height
-#             screen.blit(string_rendered, intro_rect)
-#         font = pygame.font.Font(None, 50)
-#         text = font.render("Начать заново", True, (255, 100, 100))
-#         text_x = WIDTH // 2 - text.get_width() // 2
-#         text_y = HEIGHT // 2 - text.get_height() // 2
-#         text_w = text.get_width()
-#         text_h = text.get_height()
-#         screen.blit(text, (text_x, text_y))
-#         pygame.draw.rect(screen, (255, 0, 0), (text_x - 10, text_y - 10,
-#                                                text_w + 20, text_h + 20), 3)
-#
-#         font = pygame.font.Font(None, 50)
-#         text = font.render("Выйти из игры", True, (255, 100, 100))
-#         text_x2 = WIDTH // 2 - text.get_width() // 2
-#         text_y2 = HEIGHT // 2 - text.get_height() // 2 + 100
-#         text_w2 = text.get_width()
-#         text_h2 = text.get_height()
-#         screen.blit(text, (text_x2, text_y2))
-#         pygame.draw.rect(screen, (255, 0, 0), (text_x2 - 10, text_y2 - 10,
-#                                                text_w2 + 20, text_h2 + 20), 3)
-#         for event in pygame.event.get():
-#             if event.type == pygame.KEYDOWN:  # назначаем движение, без этого появляются ошибки, если зажимать кнопки движения во время экрана поражения
-#                 if event.key == pygame.K_w:  # вверх
-#                     direction[1] -= 1
-#                 if event.key == pygame.K_d:  # вправо
-#                     direction[0] += 1
-#                 if event.key == pygame.K_s:  # вниз
-#                     direction[1] += 1
-#                 if event.key == pygame.K_a:  # влево
-#                     direction[0] -= 1
-#             if event.type == pygame.KEYUP:  # убираем движение по направлениям, если клавишу отпустили
-#                 if event.key == pygame.K_w:
-#                     direction[1] += 1
-#                 if event.key == pygame.K_d:
-#                     direction[0] -= 1
-#                 if event.key == pygame.K_s:
-#                     direction[1] -= 1
-#                 if event.key == pygame.K_a:
-#                     direction[0] += 1
-#             if event.type == pygame.QUIT:
-#                 terminate()
-#             elif event.type == pygame.MOUSEBUTTONDOWN and text_x - 10 < event.pos[
-#                 0] < text_x + 10 + text_w and text_y - 10 < event.pos[1] < text_y + 10 + text_h:
-#                 return direction, 0
-#             elif event.type == pygame.MOUSEBUTTONDOWN and text_x2 - 10 < event.pos[
-#                 0] < text_x2 + 10 + text_w2 and text_y2 - 10 < event.pos[1] < text_y2 + 10 + text_h2:
-#                 return direction, 2
-#         pygame.display.flip()
-#         clock.tick(FPS)
-
-
 def win_screen():  # окно победы, принцип тот же, что и в функции выше
     direction = [0, 0]
     a = [
@@ -279,10 +209,11 @@ def win_screen():  # окно победы, принцип тот же, что �
                   f"Время: {time_counter // 3600} мин {time_counter % 3600 // 60} сек",
                   "Всего:"] + a
 
-    fon = pygame.transform.scale(load_image('fon1.png'), (WIDTH, HEIGHT))
-    while True:
-        screen.blit(fon, (0, 0))
+    # fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
+    # screen.blit(fon, (0, 0))
 
+    while True:
+        screen.fill((0, 0, 0))
         text_coords = [10, 100]
         font = pygame.font.Font(None, 30)
         for line in intro_text:
@@ -351,10 +282,9 @@ def pause_screen():  # окно паузы, принцип тот же, что �
     # fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
     # screen.blit(fon, (0, 0))
     text_coord = 50
-    fon = pygame.transform.scale(load_image('fon1.png'), (WIDTH, HEIGHT))
 
     while True:
-        screen.blit(fon, (0, 0))
+        screen.fill((0, 0, 0))
         text_coords = [WIDTH // 2, HEIGHT // 2 - 150]
         font = pygame.font.Font(None, 50)
         for line in intro_text:
@@ -665,13 +595,20 @@ class Player(pygame.sprite.Sprite):
         self.hp = self.hp_max
         self.diagonal = False  # переменная, нужная для диагонального хода игроком
         self.pos_x, self.pos_y = pos_x, pos_y  # координаты игрока в клетках
-        self.image = images['player']
+        self.frames = []
+        self.cut_sheet(images['player'], 5, 10)
+        self.cur_frame = 0
+        self.cur_weapon = 0
+        self.cur_facing = 'r'
+        self.image = self.frames[self.cur_frame][self.cur_weapon]
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)  # положение игрока на поле
         self.mask = pygame.mask.from_surface(self.image)
         self.x_move, self.y_move = 0, 0
         self.x, self.y = self.rect.topleft
         self.is_killed = False  # живой
+        self.stop = True
+        self.rev = False
 
     def set_at_position(self, pos_x, pos_y):  # передвижение
         self.timer_x = Timer(self.speed)
@@ -696,6 +633,7 @@ class Player(pygame.sprite.Sprite):
                 self.x_move = x_move
                 self.timer_x.start()
                 self.diagonal = not self.diagonal
+                self.stop = False
             # тоже самое с y
             if self.y_move == 0 and y_move != 0 and self.timer_x.time == 0 and board[self.pos_x][
                 self.pos_y + y_move].type() not in ['wall', 'monster', 'blocked']:
@@ -703,6 +641,7 @@ class Player(pygame.sprite.Sprite):
                 self.y_move = y_move
                 self.timer_y.start()
                 self.diagonal = not self.diagonal
+                self.stop = False
         else:
             # принципе описан в верхнем if'е
             if self.y_move == 0 and y_move != 0 and self.timer_x.time == 0 and board[self.pos_x][
@@ -711,12 +650,14 @@ class Player(pygame.sprite.Sprite):
                 self.y_move = y_move
                 self.timer_y.start()
                 self.diagonal = not self.diagonal
+                self.stop = False
             if self.x_move == 0 and x_move != 0 and self.timer_y.time == 0 and board[self.pos_x + x_move][
                 self.pos_y].type() not in ['wall', 'monster', 'blocked']:
                 board[self.pos_x + x_move][self.pos_y] = Blocked()
                 self.x_move = x_move
                 self.timer_x.start()
                 self.diagonal = not self.diagonal
+                self.stop = False
 
     def update(self):
         if self.x_move != 0:
@@ -725,6 +666,18 @@ class Player(pygame.sprite.Sprite):
             self.x += self.x_move * (tile_width / self.timer_x.time_max)
             self.rect.x = self.x + camera.dx_total
             # прежнее местоположение игрока делаем травой, позицию игрока переносим
+            self.cur_frame += 0.5
+            if self.cur_frame == 10:
+                self.cur_frame = 0
+            self.image = self.frames[int(self.cur_frame)][self.cur_weapon]
+            if self.x_move < 0 and self.cur_facing == 'r':
+                self.image = pygame.transform.flip(self.image, flip_x=True, flip_y=False)
+                self.rev = True
+            elif self.x_move > 0 and self.cur_facing == 'l':
+                self.image = pygame.transform.flip(self.image, flip_x=True, flip_y=False)
+                self.rev = False
+            else:
+                self.rev = False
             if self.timer_x.time == 0:
                 board[self.pos_x][self.pos_y] = Empty()
                 self.pos_x += self.x_move
@@ -736,17 +689,44 @@ class Player(pygame.sprite.Sprite):
             self.y += self.y_move * (tile_width / self.timer_y.time_max)
             self.rect.y = self.y + camera.dy_total
             # прежнее место игрока делаем травой, позицию игрока переносим
+            self.cur_frame += 0.5
+            if self.cur_frame == 10:
+                self.cur_frame = 0
+            self.image = self.frames[int(self.cur_frame)][self.cur_weapon]
             if self.timer_y.time == 0:
                 board[self.pos_x][self.pos_y] = Empty()
                 self.pos_y += self.y_move
                 board[self.pos_x][self.pos_y] = player
                 self.y_move = 0
+        if self.stop:
+            self.cur_frame = 0
+            self.image = self.frames[int(self.cur_frame)][self.cur_weapon]
+            if self.rev:
+                self.image = pygame.transform.flip(self.image, flip_x=True, flip_y=False)
 
     def damage(self, n):
         if not cheats:
             self.hp = round((self.hp - n))
             if self.hp <= 0:
                 self.is_killed = True
+
+    def cut_sheet(self, sheet, columns, rows):
+        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
+                                sheet.get_height() // rows)
+        for j in range(rows):
+            row = []
+            for i in range(columns):
+                frame_location = (self.rect.w * i, self.rect.h * j)
+                row.append(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)))
+            self.frames.append(row)
+
+    def change_weapon(self, slot):
+        self.cur_weapon = slot
+        self.image = self.frames[int(self.cur_frame)][self.cur_weapon]
+
+    def stop_move(self):
+        self.stop = True
 
 
 class Monster(pygame.sprite.Sprite):
@@ -944,9 +924,9 @@ class Monster(pygame.sprite.Sprite):
     def set_image(self, weapon):
         if weapon == CloseWeapon:
             if self.action == 'standing':  # моб неактивен
-                self.cut_sheet(pygame.transform.scale(load_image('close_mob1.png'), (350, 50)), 7, 1)  # режем на квадратики по слайдам, функция
+                self.cut_sheet(pygame.transform.scale(load_image('close_mob2.png'), (200, 50)), 4, 1)  # режем на квадратики по слайдам, функция
             elif self.action == 'attack':  # моб атакует
-                self.cut_sheet(pygame.transform.scale(load_image('attack_close_mob.png'), (350, 50)), 7,
+                self.cut_sheet(pygame.transform.scale(load_image('attack_close_mob1.png'), (200, 50)), 4,
                                1)
         elif weapon == BulletWeapon:
             if self.action == 'standing':  # моб неактивен
