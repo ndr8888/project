@@ -1229,6 +1229,27 @@ class Inventory:  # класс иневентаря. В игре он снизу
         inventory.rage_timer.tick()  # если зелье активно, то уменьшаем время действия до 0. Иначе 0
 
 
+class Camera:
+    # зададим начальный сдвиг камеры
+    def __init__(self):
+        self.dx = 0
+        self.dy = 0
+        self.dx_total = 0
+        self.dy_total = 0
+
+    # сдвинуть объект obj на смещение камеры
+    def apply(self, obj):
+        obj.rect.x += self.dx
+        obj.rect.y += self.dy
+
+    # позиционировать камеру на объекте target
+    def update(self, target):
+        self.dx = -(target.rect.x + target.rect.w // 2 - WIDTH // 2)
+        self.dy = -(target.rect.y + target.rect.h // 2 - HEIGHT // 2)
+        self.dx_total += self.dx
+        self.dy_total += self.dy
+
+
 direction, state = start_screen()  # стартовое окно
 fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
 if state == 2:  # 2я кнопка = выход из игры
