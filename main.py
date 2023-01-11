@@ -1710,6 +1710,7 @@ while True:
         save_hp = player.hp
         save_weapons = weapon_lst.copy()
         map_num_save, map_name_save = map_num, map_name
+        player.change_weapon(0)
         while level_running:
             map_num, map_name = map_num_save, map_name_save
             player.is_killed = False
@@ -1904,6 +1905,7 @@ while True:
                     pygame.display.flip()
                     # при смерти экран поражения
                     if player.is_killed:
+                        player.change_weapon(0)
                         break
                         life_running = False
         if game_running == False:
