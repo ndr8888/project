@@ -1,73 +1,5 @@
-import pygame
-import os
-import sys
-import random
-import math
-
-clock = pygame.time.Clock()
-pygame.init()
-size = WIDTH, HEIGHT = 750, 750  # размеры окна
-screen = pygame.display.set_mode(size)
-tile_width = tile_height = 50  # размеры кнопокa
-inventory_slot_width = 60  # размеры слотов инвентаря
-
-
-class AnimatedSprite(pygame.sprite.Sprite):  # спецэффекты
-    def __init__(self, sheet, columns, rows, x, y, klv):  # klv - кол-во картинок
-        self.klv = klv
-        super().__init__(animation_group)
-        self.frames = []
-        self.cut_sheet(sheet, columns, rows)  # режем на квадратики по слайдам
-        self.cur_frame = 0
-        self.image = self.frames[self.cur_frame]  # меняем картинки
-        self.rect = self.rect.move(x, y)
-        self.cnt = 0  # счётчик, сколько раз сменилась картинка
-
-    def cut_sheet(self, sheet, columns, rows):
-        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
-                                sheet.get_height() // rows)
-        for j in range(rows):
-            for i in range(columns):
-                frame_location = (self.rect.w * i, self.rect.h * j)
-                self.frames.append(sheet.subsurface(pygame.Rect(
-                    frame_location, self.rect.size)))
-
-    def update(self):
-        self.rect.x += camera.dx
-        self.rect.y += camera.dy
-        self.cnt += 1
-        if self.cnt == self.klv:  # если объект - спецэффект и он полностью показался, то удаляется
-            self.kill()
-        self.cur_frame = (self.cur_frame + 1) % len(self.frames)
-        self.image = self.frames[self.cur_frame]
-
-
-class Timer:  # класс для засекания времени
-    def __init__(self, time_max):  # подаем время, на которое засекаем таймер
-        self.time_max = time_max
-        self.time = 0
-
-    def start(self):  # начинаем отсчёт таймера. Обязательно, чтобы таймер начал работать
-        self.time = self.time_max
-
-    def tick(self, time=1):  # 60 раз в секунду убывает на 1
-        self.time -= time  # вычитаем единичку
-        if self.time < 0:  # считаем до 0
-            self.time = 0
-
-    def stop(self):
-        self.time = 0
-
-
-def load_image(name, colorkey=None):  # функция для загрузки изображений для спрайтов
-    fullname = os.path.join('data', name)
-    # если файл не существует, то выходим
-    if not os.path.isfile(fullname):
-        print(f"Файл с изображением '{fullname}' не найден")
-        sys.exit()
-    image = pygame.image.load(fullname)
-    return image
-
+from any_classes import *
+from any_function import *
 
 # словарь с изображениями
 images = {
@@ -116,257 +48,35 @@ images = {
     'snare': load_image('snare.png'),  # ловушка,
     'heal_zone': pygame.transform.scale(load_image('heal_zone.png'), (tile_width, tile_height))  # ловушка,
 }
-FPS = 60  # кол-во тиков в секунду
 
+class AnimatedSprite(pygame.sprite.Sprite):  # спецэффекты
+    def __init__(self, sheet, columns, rows, x, y, klv):  # klv - кол-во картинок
+        self.klv = klv
+        super().__init__(animation_group)
+        self.frames = []
+        self.cut_sheet(sheet, columns, rows)  # режем на квадратики по слайдам
+        self.cur_frame = 0
+        self.image = self.frames[self.cur_frame]  # меняем картинки
+        self.rect = self.rect.move(x, y)
+        self.cnt = 0  # счётчик, сколько раз сменилась картинка
 
-def terminate():  # выход из игры
-    pygame.quit()
-    sys.exit()
+    def cut_sheet(self, sheet, columns, rows):
+        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
+                                sheet.get_height() // rows)
+        for j in range(rows):
+            for i in range(columns):
+                frame_location = (self.rect.w * i, self.rect.h * j)
+                self.frames.append(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)))
 
-
-def start_screen():  # начальное окно
-    direction = [0, 0]
-    # текст
-    intro_text = ["Правила игры",
-                  "Управление - WASD",
-                  "Смена оружий - 12345, зелья - QE",
-                  "0 - читы",
-                  "Количество уровней - 5"]
-
-    fon = random.choice(fons)
-    screen.blit(fon, (0, 0))
-    # цикл работы
-    while True:
-        screen.blit(fon, (0, 0))
-        text_coords = [10, 50]  # положение строки
-        font = pygame.font.Font(None, 25)  # размер шрифта
-        for line in intro_text:  # выводим построчно
-            string_rendered = font.render(line, 1, pygame.Color('green'))  # цвет шрифта
-            intro_rect = string_rendered.get_rect()  # положение строки. Нужно для возможности нажимания на текст
-            text_coords[1] += 10  # опускаемся ниже для следуюшей строчки
-            intro_rect.top = text_coords[1]  # верхняя граница строчки
-            intro_rect.x = text_coords[0]  # боковая граница строчки
-            text_coords[1] += intro_rect.height
-            screen.blit(string_rendered, intro_rect)
-        # описание и размеры квадрата, где будет работать "Начать игру"
-        font = pygame.font.Font(None, 50)
-        text = font.render("Начать игру", True, (100, 255, 100))
-        text_x = WIDTH // 2 - text.get_width() // 2
-        text_y = HEIGHT // 2 - text.get_height() // 2
-        text_w = text.get_width()
-        text_h = text.get_height()
-        screen.blit(text, (text_x, text_y))
-        pygame.draw.rect(screen, (0, 255, 0), (text_x - 10, text_y - 10,
-                                               text_w + 20, text_h + 20), 3)
-        # описание и размеры квадрата, где будет работать "Выйти из игры"
-        font = pygame.font.Font(None, 50)
-        text = font.render("Выйти из игры", True, (100, 255, 100))
-        text_x2 = WIDTH // 2 - text.get_width() // 2
-        text_y2 = HEIGHT // 2 - text.get_height() // 2 + 100
-        text_w2 = text.get_width()
-        text_h2 = text.get_height()
-        screen.blit(text, (text_x2, text_y2))
-        pygame.draw.rect(screen, (0, 255, 0), (text_x2 - 10, text_y2 - 10,
-                                               text_w2 + 20, text_h2 + 20), 3)
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:  # назначаем движение
-                if event.key == pygame.K_w:  # вверх
-                    direction[1] -= 1
-                if event.key == pygame.K_d:  # вправо
-                    direction[0] += 1
-                if event.key == pygame.K_s:  # вниз
-                    direction[1] += 1
-                if event.key == pygame.K_a:  # влево
-                    direction[0] -= 1
-            if event.type == pygame.KEYUP:  # убираем движение по направлениям, если клавишу отпустили
-                if event.key == pygame.K_w:
-                    direction[1] += 1
-                if event.key == pygame.K_d:
-                    direction[0] -= 1
-                if event.key == pygame.K_s:
-                    direction[1] -= 1
-                if event.key == pygame.K_a:
-                    direction[0] += 1
-            if event.type == pygame.QUIT:
-                terminate()
-            elif event.type == pygame.MOUSEBUTTONDOWN and text_x - 10 < event.pos[
-                0] < text_x + 10 + text_w and text_y - 10 < event.pos[1] < text_y + 10 + text_h:
-                return direction, 0
-            elif event.type == pygame.MOUSEBUTTONDOWN and text_x2 - 10 < event.pos[
-                0] < text_x2 + 10 + text_w2 and text_y2 - 10 < event.pos[1] < text_y2 + 10 + text_h2:
-                return direction, 2
-        pygame.display.flip()
-        clock.tick(FPS)
-
-
-def win_screen():  # окно победы, принцип тот же, что и в функции выше
-    direction = [0, 0]
-    a = [
-        f'Уровень {i + 1}: {sum([j for j in level_counters[i]]) // 3600} мин ' +
-        f'{sum([j for j in level_counters[i]]) % 3600 // 60} сек '
-        for i in range(len(level_counters))]
-    intro_text = ["ИГРА ПРОЙДЕНА",
-                  f"Время: {time_counter // 3600} мин {time_counter % 3600 // 60} сек",
-                  "Всего:"] + a
-
-    fon = random.choice(fons)
-    screen.blit(fon, (0, 0))
-
-    while True:
-        screen.blit(fon, (0, 0))
-        text_coords = [10, 100]
-        font = pygame.font.Font(None, 30)
-        for line in intro_text:
-            string_rendered = font.render(line, 1, pygame.Color('yellow'))
-            intro_rect = string_rendered.get_rect()
-            text_coords[1] += 10
-            intro_rect.top = text_coords[1]
-            # intro_rect.x = text_coords[0] - intro_rect.w // 2
-            intro_rect.x = text_coords[0]
-            text_coords[1] += intro_rect.height
-            screen.blit(string_rendered, intro_rect)
-        font = pygame.font.Font(None, 50)
-        text = font.render("Пройти заново", True, (255, 255, 100))
-        text_x = WIDTH // 2 - text.get_width() // 2
-        text_y = HEIGHT // 2 - text.get_height() // 2
-        text_w = text.get_width()
-        text_h = text.get_height()
-        screen.blit(text, (text_x, text_y))
-        pygame.draw.rect(screen, (255, 255, 0), (text_x - 10, text_y - 10,
-                                                 text_w + 20, text_h + 20), 3)
-
-        font = pygame.font.Font(None, 50)
-        text = font.render("Выйти из игры", True, (255, 255, 100))
-        text_x2 = WIDTH // 2 - text.get_width() // 2
-        text_y2 = HEIGHT // 2 - text.get_height() // 2 + 100
-        text_w2 = text.get_width()
-        text_h2 = text.get_height()
-        screen.blit(text, (text_x2, text_y2))
-        pygame.draw.rect(screen, (255, 255, 0), (text_x2 - 10, text_y2 - 10,
-                                                 text_w2 + 20, text_h2 + 20), 3)
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:  # назначаем движение, без этого появляются ошибки, если зажимать кнопки движения во время экрана поражения
-                if event.key == pygame.K_w:  # вверх
-                    direction[1] -= 1
-                if event.key == pygame.K_d:  # вправо
-                    direction[0] += 1
-                if event.key == pygame.K_s:  # вниз
-                    direction[1] += 1
-                if event.key == pygame.K_a:  # влево
-                    direction[0] -= 1
-            if event.type == pygame.KEYUP:  # убираем движение по направлениям, если клавишу отпустили
-                if event.key == pygame.K_w:
-                    direction[1] += 1
-                if event.key == pygame.K_d:
-                    direction[0] -= 1
-                if event.key == pygame.K_s:
-                    direction[1] -= 1
-                if event.key == pygame.K_a:
-                    direction[0] += 1
-            if event.type == pygame.QUIT:
-                terminate()
-            elif event.type == pygame.MOUSEBUTTONDOWN and text_x - 10 < event.pos[
-                0] < text_x + 10 + text_w and text_y - 10 < event.pos[1] < text_y + 10 + text_h:
-                return direction, 0
-            elif event.type == pygame.MOUSEBUTTONDOWN and text_x2 - 10 < event.pos[
-                0] < text_x2 + 10 + text_w2 and text_y2 - 10 < event.pos[1] < text_y2 + 10 + text_h2:
-                return direction, 2
-        pygame.display.flip()
-        clock.tick(FPS)
-
-
-def pause_screen():  # окно паузы, принцип тот же, что и в функции выше
-    direction = [0, 0]
-    intro_text = ["ПАУЗА"]
-
-    fon = random.choice(fons)
-    screen.blit(fon, (0, 0))
-    text_coord = 50
-
-    while True:
-        screen.blit(fon, (0, 0))
-        text_coords = [WIDTH // 2, HEIGHT // 2 - 150]
-        font = pygame.font.Font(None, 50)
-        for line in intro_text:
-            string_rendered = font.render(line, 1, pygame.Color('green'))
-            intro_rect = string_rendered.get_rect()
-            text_coords[1] += 10
-            intro_rect.top = text_coords[1]
-            intro_rect.x = text_coords[0] - intro_rect.w // 2
-            text_coords[1] += intro_rect.height
-            screen.blit(string_rendered, intro_rect)
-        font = pygame.font.Font(None, 50)
-        text = font.render("Продолжить игру", True, (100, 255, 100))
-        text_x = WIDTH // 2 - text.get_width() // 2
-        text_y = HEIGHT // 2 - text.get_height() // 2
-        text_w = text.get_width()
-        text_h = text.get_height()
-        screen.blit(text, (text_x, text_y))
-        pygame.draw.rect(screen, (0, 255, 0), (text_x - 10, text_y - 10,
-                                               text_w + 20, text_h + 20), 3)
-
-        text = font.render("Начать заново", True, (100, 255, 100))
-        text_x1 = WIDTH // 2 - text.get_width() // 2
-        text_y1 = HEIGHT // 2 - text.get_height() // 2 + 100
-        text_w1 = text.get_width()
-        text_h1 = text.get_height()
-        screen.blit(text, (text_x1, text_y1))
-        pygame.draw.rect(screen, (0, 255, 0), (text_x1 - 10, text_y1 - 10,
-                                               text_w1 + 20, text_h1 + 20), 3)
-
-        font = pygame.font.Font(None, 50)
-        text = font.render("Выйти из игры", True, (100, 255, 100))
-        text_x2 = WIDTH // 2 - text.get_width() // 2
-        text_y2 = HEIGHT // 2 - text.get_height() // 2 + 200
-        text_w2 = text.get_width()
-        text_h2 = text.get_height()
-        screen.blit(text, (text_x2, text_y2))
-        pygame.draw.rect(screen, (0, 255, 0), (text_x2 - 10, text_y2 - 10,
-                                               text_w2 + 20, text_h2 + 20), 3)
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:  # назначаем движение
-                if event.key == pygame.K_w:  # вверх
-                    direction[1] -= 1
-                if event.key == pygame.K_d:  # вправо
-                    direction[0] += 1
-                if event.key == pygame.K_s:  # вниз
-                    direction[1] += 1
-                if event.key == pygame.K_a:  # влево
-                    direction[0] -= 1
-            if event.type == pygame.KEYUP:  # убираем движение по направлениям, если клавишу отпустили
-                if event.key == pygame.K_w:
-                    direction[1] += 1
-                if event.key == pygame.K_d:
-                    direction[0] -= 1
-                if event.key == pygame.K_s:
-                    direction[1] -= 1
-                if event.key == pygame.K_a:
-                    direction[0] += 1
-            if event.type == pygame.QUIT:
-                terminate()
-            elif event.type == pygame.MOUSEBUTTONDOWN and text_x - 10 < event.pos[
-                0] < text_x + 10 + text_w and text_y - 10 < event.pos[1] < text_y + 10 + text_h:
-                return direction, 0
-            elif event.type == pygame.MOUSEBUTTONDOWN and text_x1 - 10 < event.pos[
-                0] < text_x1 + 10 + text_w1 and text_y1 - 10 < event.pos[1] < text_y1 + 10 + text_h1:
-                return direction, 1
-            elif event.type == pygame.MOUSEBUTTONDOWN and text_x2 - 10 < event.pos[
-                0] < text_x2 + 10 + text_w2 and text_y2 - 10 < event.pos[1] < text_y2 + 10 + text_h2:
-                return direction, 2
-        pygame.display.flip()
-        clock.tick(FPS)
-
-
-def load_level(filename):  # чтение уровня
-    filename = "data/" + filename
-    # читаем уровень, убирая символы перевода строки
-    with open(filename, 'r') as mapFile:
-        level_map = [line.strip('\n') for line in mapFile]
-    # и подсчитываем максимальную длину
-    max_width = max(map(len, level_map))
-
-    # дополняем каждую строку пустыми клетками ('№')
-    return list(map(lambda x: x.ljust(max_width, '-'), level_map))
+    def update(self):
+        self.rect.x += camera.dx
+        self.rect.y += camera.dy
+        self.cnt += 1
+        if self.cnt == self.klv:  # если объект - спецэффект и он полностью показался, то удаляется
+            self.kill()
+        self.cur_frame = (self.cur_frame + 1) % len(self.frames)
+        self.image = self.frames[self.cur_frame]
 
 
 class BackgroundTile(pygame.sprite.Sprite):  # класс фоновой картинки, пришлось разделить его и класс стены
@@ -463,40 +173,6 @@ class WinTeleport(BackgroundTile):  # отдельный финишный тел
         return 'empty'
 
 
-class Wall(pygame.sprite.Sprite):  # класс стены
-    def __init__(self, pos_x, pos_y):
-        super().__init__(tiles_group, all_sprites, wall_group)
-        self.image = images['wall']
-        self.rect = self.image.get_rect().move(  # положение на экране
-            tile_width * pos_x, tile_height * pos_y)
-        self.mask = pygame.mask.from_surface(self.image)
-        self.im = ''
-
-    def type(self):  # возвращает строку типа спрайта, нужно для использования спрайтов в матрице
-        return 'wall'
-
-
-class WallTriggerable(Wall):  # разрушаемая стена. Разрушается при смерти monster2
-    def __init__(self, pos_x, pos_y, key_trigger, monster_trigger):
-        super().__init__(pos_x, pos_y)
-        self.image = images['wallTrig']
-        self.pos_x, self.pos_y = pos_x, pos_y
-        self.status = True  # для разрушения стен
-        self.key_trigger, self.monster_trigger = key_trigger, monster_trigger
-
-    def update(self):
-        if (len(guard_monster_group) == 0 or not self.monster_trigger) and (
-                keys_not_collected == 0 or not self.key_trigger):  # если все monster2 мертвы, то стены рушатся
-            self.status = False
-            self.image = images['grass']
-
-    def type(self):
-        if self.status:
-            return 'wall'
-        else:
-            return 'empty'
-
-
 class Jewel(BackgroundTile):  # класс сокровищ
     def __init__(self, pos_x, pos_y):
         super().__init__(pos_x, pos_y)
@@ -569,20 +245,38 @@ class RagePotion(BackgroundTile):
         return 'empty'
 
 
-class Empty:  # класс травы для матрицы
-    def __init__(self):
-        pass
+class Wall(pygame.sprite.Sprite):  # класс стены
+    def __init__(self, pos_x, pos_y):
+        super().__init__(tiles_group, all_sprites, wall_group)
+        self.image = images['wall']
+        self.rect = self.image.get_rect().move(  # положение на экране
+            tile_width * pos_x, tile_height * pos_y)
+        self.mask = pygame.mask.from_surface(self.image)
+        self.im = ''
+
+    def type(self):  # возвращает строку типа спрайта, нужно для использования спрайтов в матрице
+        return 'wall'
+
+
+class WallTriggerable(Wall):  # разрушаемая стена. Разрушается при смерти monster2
+    def __init__(self, pos_x, pos_y, key_trigger, monster_trigger):
+        super().__init__(pos_x, pos_y)
+        self.image = images['wallTrig']
+        self.pos_x, self.pos_y = pos_x, pos_y
+        self.status = True  # для разрушения стен
+        self.key_trigger, self.monster_trigger = key_trigger, monster_trigger
+
+    def update(self):
+        if (len(guard_monster_group) == 0 or not self.monster_trigger) and (
+                keys_not_collected == 0 or not self.key_trigger):  # если все monster2 мертвы, то стены рушатся
+            self.status = False
+            self.image = images['grass']
 
     def type(self):
-        return 'empty'
-
-
-class Blocked:  # класс стены для матрицы
-    def __init__(self):
-        pass
-
-    def type(self):
-        return 'blocked'
+        if self.status:
+            return 'wall'
+        else:
+            return 'empty'
 
 
 class Player(pygame.sprite.Sprite):
@@ -1362,63 +1056,6 @@ def generate_level(level):
     return Board(table), player_coords[0], player_coords[1]
 
 
-class Camera:
-    # зададим начальный сдвиг камеры
-    def __init__(self):
-        self.dx = 0
-        self.dy = 0
-        self.dx_total = 0
-        self.dy_total = 0
-
-    # сдвинуть объект obj на смещение камеры
-    def apply(self, obj):
-        obj.rect.x += self.dx
-        obj.rect.y += self.dy
-
-    # позиционировать камеру на объекте target
-    def update(self, target):
-        self.dx = -(target.rect.x + target.rect.w // 2 - WIDTH // 2)
-        self.dy = -(target.rect.y + target.rect.h // 2 - HEIGHT // 2)
-        self.dx_total += self.dx
-        self.dy_total += self.dy
-
-
-def is_linear_path(x1, y1, x2, y2, owner=None, fraction=None, target=None, go_through_entities=False, field=1):
-    a = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-    vector = ((x2 - x1) / a * 2, (y2 - y1) / a * 2)
-    cond = field == 1
-    cond1 = (vector[0] >= 0) == (vector[1] >= 0)
-    field //= 2
-    while abs(int(x1) - int(x2)) > 3 or abs(int(y1) - int(y2)) > 3:
-        for i in wall_group:
-            if cond:
-                if i.rect.collidepoint(x1, y1):
-                    return False
-            elif cond1:
-                if (i.rect.collidepoint(x1 + field, y1 - field) or i.rect.collidepoint(x1 - field, y1 + field)):
-                    return False
-            else:
-                if (i.rect.collidepoint(x1 - field, y1 - field) or i.rect.collidepoint(x1 + field, y1 + field)):
-                    return False
-        # if not go_through_entities:
-        #     for i in entity_group:
-        #         if field == 1:
-        #             if i.rect.collidepoint(x1, y1) and i != owner and i != target and i not in fraction:
-        #                 return False
-        #         else:
-        #             if (vector[0] >= 0) == (vector[1] >= 0):
-        #                 if (i.rect.collidepoint(x1 + field // 2, y1 - field // 2) or i.rect.collidepoint(
-        #                         x1 - field // 2, y1 + field // 2)) and i != owner and i != target and i not in fraction:
-        #                     return False
-        #             else:
-        #                 if (i.rect.collidepoint(x1 - field // 2, y1 - field // 2) or i.rect.collidepoint(
-        #                         x1 + field // 2, y1 + field // 2)) and i != owner and i != target and i not in fraction:
-        #                     return False
-        x1 += vector[0]
-        y1 += vector[1]
-    return True
-
-
 class Board:  # класс матрицы доски
     def __init__(self, table):
         self.table = table  # сама матрица
@@ -1592,19 +1229,6 @@ class Inventory:  # класс иневентаря. В игре он снизу
         inventory.rage_timer.tick()  # если зелье активно, то уменьшаем время действия до 0. Иначе 0
 
 
-def draw_hp(entity):
-    pygame.draw.rect(screen, (255, 0, 0), (entity.rect.x, entity.rect.y - 20,
-                                           int(tile_width * (entity.hp / entity.hp_max)), 15))
-    pygame.draw.rect(screen, (0, 0, 0), (entity.rect.x, entity.rect.y - 20,
-                                         tile_width, 15), 2)
-    font = pygame.font.Font(None, 20)
-    text = font.render(str(entity.hp), True, pygame.Color('white'))
-    screen.blit(text, (entity.rect.x, entity.rect.y - text.get_height() - 20))
-
-
-fons = [pygame.transform.scale(load_image('fon1.jpg'), (WIDTH, HEIGHT)),
-        pygame.transform.scale(load_image('fon2.jpg'), (WIDTH, HEIGHT)),
-        pygame.transform.scale(load_image('fon3.jpg'), (WIDTH, HEIGHT))]
 direction, state = start_screen()  # стартовое окно
 fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
 if state == 2:  # 2я кнопка = выход из игры
@@ -1617,15 +1241,7 @@ while True:
         direction = [0, 0]
     is_start = False
     game_running = True
-    animation_group = pygame.sprite.Group()
-    all_sprites = pygame.sprite.Group()
-    player_group = pygame.sprite.Group()
-    entity_group = pygame.sprite.Group()
-    static_sprites = pygame.sprite.Group()
-    weapon_group = pygame.sprite.Group()
     player = Player(0, 0)
-    time_counter = 0
-    level_counters = [[0 for _ in range(i)] for i in [1, 1, 1, 3, 3]]
     is_won = False
     weapon_lst = [CloseWeapon('sword', 'close_attack1', -50, -50, player, player_group, 20, FPS // 2,
                               rang=4, name='меч')]
