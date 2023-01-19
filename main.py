@@ -170,22 +170,22 @@ def start_screen():  # начальное окно
                                                text_w2 + 20, text_h2 + 20), 3)
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:  # назначаем движение
-                if event.key == pygame.K_w:  # вверх
+                if event.key == pygame.K_w or event.key = pygame.K_up:  # вверх
                     direction[1] -= 1
-                if event.key == pygame.K_d:  # вправо
+                if event.key == pygame.K_d or event.key = pygame.K_right:  # вправо
                     direction[0] += 1
-                if event.key == pygame.K_s:  # вниз
+                if event.key == pygame.K_s or event.key = pygame.K_down:  # вниз
                     direction[1] += 1
-                if event.key == pygame.K_a:  # влево
+                if event.key == pygame.K_a or event.key = pygame.K_left:  # влево
                     direction[0] -= 1
             if event.type == pygame.KEYUP:  # убираем движение по направлениям, если клавишу отпустили
-                if event.key == pygame.K_w:
+                if event.key == pygame.K_w or event.key = pygame.K_up:
                     direction[1] += 1
-                if event.key == pygame.K_d:
+                if event.key == pygame.K_d or event.key = pygame.K_right:
                     direction[0] -= 1
-                if event.key == pygame.K_s:
+                if event.key == pygame.K_s or event.key = pygame.K_down:
                     direction[1] -= 1
-                if event.key == pygame.K_a:
+                if event.key == pygame.K_a or event.key = pygame.K_left:
                     direction[0] += 1
             if event.type == pygame.QUIT:
                 terminate()
@@ -245,23 +245,23 @@ def win_screen():  # окно победы, принцип тот же, что �
         pygame.draw.rect(screen, (255, 255, 0), (text_x2 - 10, text_y2 - 10,
                                                  text_w2 + 20, text_h2 + 20), 3)
         for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:  # назначаем движение, без этого появляются ошибки, если зажимать кнопки движения во время экрана поражения
-                if event.key == pygame.K_w:  # вверх
+            if event.type == pygame.KEYDOWN:  # назначаем движение
+                if event.key == pygame.K_w or event.key = pygame.K_up:  # вверх
                     direction[1] -= 1
-                if event.key == pygame.K_d:  # вправо
+                if event.key == pygame.K_d or event.key = pygame.K_right:  # вправо
                     direction[0] += 1
-                if event.key == pygame.K_s:  # вниз
+                if event.key == pygame.K_s or event.key = pygame.K_down:  # вниз
                     direction[1] += 1
-                if event.key == pygame.K_a:  # влево
+                if event.key == pygame.K_a or event.key = pygame.K_left:  # влево
                     direction[0] -= 1
             if event.type == pygame.KEYUP:  # убираем движение по направлениям, если клавишу отпустили
-                if event.key == pygame.K_w:
+                if event.key == pygame.K_w or event.key = pygame.K_up:
                     direction[1] += 1
-                if event.key == pygame.K_d:
+                if event.key == pygame.K_d or event.key = pygame.K_right:
                     direction[0] -= 1
-                if event.key == pygame.K_s:
+                if event.key == pygame.K_s or event.key = pygame.K_down:
                     direction[1] -= 1
-                if event.key == pygame.K_a:
+                if event.key == pygame.K_a or event.key = pygame.K_left:
                     direction[0] += 1
             if event.type == pygame.QUIT:
                 terminate()
@@ -325,22 +325,22 @@ def pause_screen():  # окно паузы, принцип тот же, что �
                                                text_w2 + 20, text_h2 + 20), 3)
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:  # назначаем движение
-                if event.key == pygame.K_w:  # вверх
+                if event.key == pygame.K_w or event.key = pygame.K_up:  # вверх
                     direction[1] -= 1
-                if event.key == pygame.K_d:  # вправо
+                if event.key == pygame.K_d or event.key = pygame.K_right:  # вправо
                     direction[0] += 1
-                if event.key == pygame.K_s:  # вниз
+                if event.key == pygame.K_s or event.key = pygame.K_down:  # вниз
                     direction[1] += 1
-                if event.key == pygame.K_a:  # влево
+                if event.key == pygame.K_a or event.key = pygame.K_left:  # влево
                     direction[0] -= 1
             if event.type == pygame.KEYUP:  # убираем движение по направлениям, если клавишу отпустили
-                if event.key == pygame.K_w:
+                if event.key == pygame.K_w or event.key = pygame.K_up:
                     direction[1] += 1
-                if event.key == pygame.K_d:
+                if event.key == pygame.K_d or event.key = pygame.K_right:
                     direction[0] -= 1
-                if event.key == pygame.K_s:
+                if event.key == pygame.K_s or event.key = pygame.K_down:
                     direction[1] -= 1
-                if event.key == pygame.K_a:
+                if event.key == pygame.K_a or event.key = pygame.K_left:
                     direction[0] += 1
             if event.type == pygame.QUIT:
                 terminate()
