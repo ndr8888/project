@@ -1,72 +1,6 @@
-import pygame
-import os
-import sys
-import random
 import math
-
-clock = pygame.time.Clock()
-pygame.init()
-size = WIDTH, HEIGHT = 750, 750  # размеры окна
-screen = pygame.display.set_mode(size)
-tile_width = tile_height = 50  # размеры кнопокa
-inventory_slot_width = 60  # размеры слотов инвентаря
-
-
-class AnimatedSprite(pygame.sprite.Sprite):  # спецэффекты
-    def __init__(self, sheet, columns, rows, x, y, klv):  # klv - кол-во картинок
-        self.klv = klv
-        super().__init__(animation_group)
-        self.frames = []
-        self.cut_sheet(sheet, columns, rows)  # режем на квадратики по слайдам
-        self.cur_frame = 0
-        self.image = self.frames[self.cur_frame]  # меняем картинки
-        self.rect = self.rect.move(x, y)
-        self.cnt = 0  # счётчик, сколько раз сменилась картинка
-
-    def cut_sheet(self, sheet, columns, rows):
-        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
-                                sheet.get_height() // rows)
-        for j in range(rows):
-            for i in range(columns):
-                frame_location = (self.rect.w * i, self.rect.h * j)
-                self.frames.append(sheet.subsurface(pygame.Rect(
-                    frame_location, self.rect.size)))
-
-    def update(self):
-        self.rect.x += camera.dx
-        self.rect.y += camera.dy
-        self.cnt += 1
-        if self.cnt == self.klv:  # если объект - спецэффект и он полностью показался, то удаляется
-            self.kill()
-        self.cur_frame = (self.cur_frame + 1) % len(self.frames)
-        self.image = self.frames[self.cur_frame]
-
-
-class Timer:  # класс для засекания времени
-    def __init__(self, time_max):  # подаем время, на которое засекаем таймер
-        self.time_max = time_max
-        self.time = 0
-
-    def start(self):  # начинаем отсчёт таймера. Обязательно, чтобы таймер начал работать
-        self.time = self.time_max
-
-    def tick(self, time=1):  # 60 раз в секунду убывает на 1
-        self.time -= time  # вычитаем единичку
-        if self.time < 0:  # считаем до 0
-            self.time = 0
-
-    def stop(self):
-        self.time = 0
-
-
-def load_image(name, colorkey=None):  # функция для загрузки изображений для спрайтов
-    fullname = os.path.join('data', name)
-    # если файл не существует, то выходим
-    if not os.path.isfile(fullname):
-        print(f"Файл с изображением '{fullname}' не найден")
-        sys.exit()
-    image = pygame.image.load(fullname)
-    return image
+from any_function import *
+from Constants import *
 
 
 # словарь с изображениями
@@ -116,257 +50,103 @@ images = {
     'snare': load_image('snare.png'),  # ловушка,
     'heal_zone': pygame.transform.scale(load_image('heal_zone.png'), (tile_width, tile_height))  # ловушка,
 }
-FPS = 60  # кол-во тиков в секунду
 
 
-def terminate():  # выход из игры
-    pygame.quit()
-    sys.exit()
+class Empty:  # класс травы для матрицы
+    def __init__(self):
+        pass
+
+    def type(self):
+        return 'empty'
 
 
-def start_screen():  # начальное окно
-    direction = [0, 0]
-    # текст
-    intro_text = ["Правила игры",
-                  "Управление - WASD",
-                  "Смена оружий - 12345, зелья - QE",
-                  "0 - читы",
-                  "Количество уровней - 5"]
+class Blocked:  # класс стены для матрицы
+    def __init__(self):
+        pass
 
-    fon = random.choice(fons)
-    screen.blit(fon, (0, 0))
-    # цикл работы
-    while True:
-        screen.blit(fon, (0, 0))
-        text_coords = [10, 50]  # положение строки
-        font = pygame.font.Font(None, 25)  # размер шрифта
-        for line in intro_text:  # выводим построчно
-            string_rendered = font.render(line, 1, pygame.Color('green'))  # цвет шрифта
-            intro_rect = string_rendered.get_rect()  # положение строки. Нужно для возможности нажимания на текст
-            text_coords[1] += 10  # опускаемся ниже для следуюшей строчки
-            intro_rect.top = text_coords[1]  # верхняя граница строчки
-            intro_rect.x = text_coords[0]  # боковая граница строчки
-            text_coords[1] += intro_rect.height
-            screen.blit(string_rendered, intro_rect)
-        # описание и размеры квадрата, где будет работать "Начать игру"
-        font = pygame.font.Font(None, 50)
-        text = font.render("Начать игру", True, (100, 255, 100))
-        text_x = WIDTH // 2 - text.get_width() // 2
-        text_y = HEIGHT // 2 - text.get_height() // 2
-        text_w = text.get_width()
-        text_h = text.get_height()
-        screen.blit(text, (text_x, text_y))
-        pygame.draw.rect(screen, (0, 255, 0), (text_x - 10, text_y - 10,
-                                               text_w + 20, text_h + 20), 3)
-        # описание и размеры квадрата, где будет работать "Выйти из игры"
-        font = pygame.font.Font(None, 50)
-        text = font.render("Выйти из игры", True, (100, 255, 100))
-        text_x2 = WIDTH // 2 - text.get_width() // 2
-        text_y2 = HEIGHT // 2 - text.get_height() // 2 + 100
-        text_w2 = text.get_width()
-        text_h2 = text.get_height()
-        screen.blit(text, (text_x2, text_y2))
-        pygame.draw.rect(screen, (0, 255, 0), (text_x2 - 10, text_y2 - 10,
-                                               text_w2 + 20, text_h2 + 20), 3)
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:  # назначаем движение
-                if event.key == pygame.K_w:  # вверх
-                    direction[1] -= 1
-                if event.key == pygame.K_d:  # вправо
-                    direction[0] += 1
-                if event.key == pygame.K_s:  # вниз
-                    direction[1] += 1
-                if event.key == pygame.K_a:  # влево
-                    direction[0] -= 1
-            if event.type == pygame.KEYUP:  # убираем движение по направлениям, если клавишу отпустили
-                if event.key == pygame.K_w:
-                    direction[1] += 1
-                if event.key == pygame.K_d:
-                    direction[0] -= 1
-                if event.key == pygame.K_s:
-                    direction[1] -= 1
-                if event.key == pygame.K_a:
-                    direction[0] += 1
-            if event.type == pygame.QUIT:
-                terminate()
-            elif event.type == pygame.MOUSEBUTTONDOWN and text_x - 10 < event.pos[
-                0] < text_x + 10 + text_w and text_y - 10 < event.pos[1] < text_y + 10 + text_h:
-                return direction, 0
-            elif event.type == pygame.MOUSEBUTTONDOWN and text_x2 - 10 < event.pos[
-                0] < text_x2 + 10 + text_w2 and text_y2 - 10 < event.pos[1] < text_y2 + 10 + text_h2:
-                return direction, 2
-        pygame.display.flip()
-        clock.tick(FPS)
+    def type(self):
+        return 'blocked'
 
 
-def win_screen():  # окно победы, принцип тот же, что и в функции выше
-    direction = [0, 0]
-    a = [
-        f'Уровень {i + 1}: {sum([j for j in level_counters[i]]) // 3600} мин ' +
-        f'{sum([j for j in level_counters[i]]) % 3600 // 60} сек '
-        for i in range(len(level_counters))]
-    intro_text = ["ИГРА ПРОЙДЕНА",
-                  f"Время: {time_counter // 3600} мин {time_counter % 3600 // 60} сек",
-                  "Всего:"] + a
+class AnimatedSprite(pygame.sprite.Sprite):  # спецэффекты
+    def __init__(self, sheet, columns, rows, x, y, klv):  # klv - кол-во картинок
+        self.klv = klv
+        super().__init__(animation_group)
+        self.frames = []
+        self.cut_sheet(sheet, columns, rows)  # режем на квадратики по слайдам
+        self.cur_frame = 0
+        self.image = self.frames[self.cur_frame]  # меняем картинки
+        self.rect = self.rect.move(x, y)
+        self.cnt = 0  # счётчик, сколько раз сменилась картинка
 
-    fon = random.choice(fons)
-    screen.blit(fon, (0, 0))
+    def cut_sheet(self, sheet, columns, rows):
+        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
+                                sheet.get_height() // rows)
+        for j in range(rows):
+            for i in range(columns):
+                frame_location = (self.rect.w * i, self.rect.h * j)
+                self.frames.append(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)))
 
-    while True:
-        screen.blit(fon, (0, 0))
-        text_coords = [10, 100]
-        font = pygame.font.Font(None, 30)
-        for line in intro_text:
-            string_rendered = font.render(line, 1, pygame.Color('yellow'))
-            intro_rect = string_rendered.get_rect()
-            text_coords[1] += 10
-            intro_rect.top = text_coords[1]
-            # intro_rect.x = text_coords[0] - intro_rect.w // 2
-            intro_rect.x = text_coords[0]
-            text_coords[1] += intro_rect.height
-            screen.blit(string_rendered, intro_rect)
-        font = pygame.font.Font(None, 50)
-        text = font.render("Пройти заново", True, (255, 255, 100))
-        text_x = WIDTH // 2 - text.get_width() // 2
-        text_y = HEIGHT // 2 - text.get_height() // 2
-        text_w = text.get_width()
-        text_h = text.get_height()
-        screen.blit(text, (text_x, text_y))
-        pygame.draw.rect(screen, (255, 255, 0), (text_x - 10, text_y - 10,
-                                                 text_w + 20, text_h + 20), 3)
-
-        font = pygame.font.Font(None, 50)
-        text = font.render("Выйти из игры", True, (255, 255, 100))
-        text_x2 = WIDTH // 2 - text.get_width() // 2
-        text_y2 = HEIGHT // 2 - text.get_height() // 2 + 100
-        text_w2 = text.get_width()
-        text_h2 = text.get_height()
-        screen.blit(text, (text_x2, text_y2))
-        pygame.draw.rect(screen, (255, 255, 0), (text_x2 - 10, text_y2 - 10,
-                                                 text_w2 + 20, text_h2 + 20), 3)
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:  # назначаем движение, без этого появляются ошибки, если зажимать кнопки движения во время экрана поражения
-                if event.key == pygame.K_w:  # вверх
-                    direction[1] -= 1
-                if event.key == pygame.K_d:  # вправо
-                    direction[0] += 1
-                if event.key == pygame.K_s:  # вниз
-                    direction[1] += 1
-                if event.key == pygame.K_a:  # влево
-                    direction[0] -= 1
-            if event.type == pygame.KEYUP:  # убираем движение по направлениям, если клавишу отпустили
-                if event.key == pygame.K_w:
-                    direction[1] += 1
-                if event.key == pygame.K_d:
-                    direction[0] -= 1
-                if event.key == pygame.K_s:
-                    direction[1] -= 1
-                if event.key == pygame.K_a:
-                    direction[0] += 1
-            if event.type == pygame.QUIT:
-                terminate()
-            elif event.type == pygame.MOUSEBUTTONDOWN and text_x - 10 < event.pos[
-                0] < text_x + 10 + text_w and text_y - 10 < event.pos[1] < text_y + 10 + text_h:
-                return direction, 0
-            elif event.type == pygame.MOUSEBUTTONDOWN and text_x2 - 10 < event.pos[
-                0] < text_x2 + 10 + text_w2 and text_y2 - 10 < event.pos[1] < text_y2 + 10 + text_h2:
-                return direction, 2
-        pygame.display.flip()
-        clock.tick(FPS)
+    def update(self):
+        self.rect.x += camera.dx
+        self.rect.y += camera.dy
+        self.cnt += 1
+        if self.cnt == self.klv:  # если объект - спецэффект и он полностью показался, то удаляется
+            self.kill()
+        self.cur_frame = (self.cur_frame + 1) % len(self.frames)
+        self.image = self.frames[self.cur_frame]
 
 
-def pause_screen():  # окно паузы, принцип тот же, что и в функции выше
-    direction = [0, 0]
-    intro_text = ["ПАУЗА"]
+class Timer:  # класс для засекания времени
+    def __init__(self, time_max):  # подаем время, на которое засекаем таймер
+        self.time_max = time_max
+        self.time = 0
 
-    fon = random.choice(fons)
-    screen.blit(fon, (0, 0))
-    text_coord = 50
+    def start(self):  # начинаем отсчёт таймера. Обязательно, чтобы таймер начал работать
+        self.time = self.time_max
 
-    while True:
-        screen.blit(fon, (0, 0))
-        text_coords = [WIDTH // 2, HEIGHT // 2 - 150]
-        font = pygame.font.Font(None, 50)
-        for line in intro_text:
-            string_rendered = font.render(line, 1, pygame.Color('green'))
-            intro_rect = string_rendered.get_rect()
-            text_coords[1] += 10
-            intro_rect.top = text_coords[1]
-            intro_rect.x = text_coords[0] - intro_rect.w // 2
-            text_coords[1] += intro_rect.height
-            screen.blit(string_rendered, intro_rect)
-        font = pygame.font.Font(None, 50)
-        text = font.render("Продолжить игру", True, (100, 255, 100))
-        text_x = WIDTH // 2 - text.get_width() // 2
-        text_y = HEIGHT // 2 - text.get_height() // 2
-        text_w = text.get_width()
-        text_h = text.get_height()
-        screen.blit(text, (text_x, text_y))
-        pygame.draw.rect(screen, (0, 255, 0), (text_x - 10, text_y - 10,
-                                               text_w + 20, text_h + 20), 3)
+    def tick(self, time=1):  # 60 раз в секунду убывает на 1
+        self.time -= time  # вычитаем единичку
+        if self.time < 0:  # считаем до 0
+            self.time = 0
 
-        text = font.render("Начать заново", True, (100, 255, 100))
-        text_x1 = WIDTH // 2 - text.get_width() // 2
-        text_y1 = HEIGHT // 2 - text.get_height() // 2 + 100
-        text_w1 = text.get_width()
-        text_h1 = text.get_height()
-        screen.blit(text, (text_x1, text_y1))
-        pygame.draw.rect(screen, (0, 255, 0), (text_x1 - 10, text_y1 - 10,
-                                               text_w1 + 20, text_h1 + 20), 3)
-
-        font = pygame.font.Font(None, 50)
-        text = font.render("Выйти из игры", True, (100, 255, 100))
-        text_x2 = WIDTH // 2 - text.get_width() // 2
-        text_y2 = HEIGHT // 2 - text.get_height() // 2 + 200
-        text_w2 = text.get_width()
-        text_h2 = text.get_height()
-        screen.blit(text, (text_x2, text_y2))
-        pygame.draw.rect(screen, (0, 255, 0), (text_x2 - 10, text_y2 - 10,
-                                               text_w2 + 20, text_h2 + 20), 3)
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:  # назначаем движение
-                if event.key == pygame.K_w:  # вверх
-                    direction[1] -= 1
-                if event.key == pygame.K_d:  # вправо
-                    direction[0] += 1
-                if event.key == pygame.K_s:  # вниз
-                    direction[1] += 1
-                if event.key == pygame.K_a:  # влево
-                    direction[0] -= 1
-            if event.type == pygame.KEYUP:  # убираем движение по направлениям, если клавишу отпустили
-                if event.key == pygame.K_w:
-                    direction[1] += 1
-                if event.key == pygame.K_d:
-                    direction[0] -= 1
-                if event.key == pygame.K_s:
-                    direction[1] -= 1
-                if event.key == pygame.K_a:
-                    direction[0] += 1
-            if event.type == pygame.QUIT:
-                terminate()
-            elif event.type == pygame.MOUSEBUTTONDOWN and text_x - 10 < event.pos[
-                0] < text_x + 10 + text_w and text_y - 10 < event.pos[1] < text_y + 10 + text_h:
-                return direction, 0
-            elif event.type == pygame.MOUSEBUTTONDOWN and text_x1 - 10 < event.pos[
-                0] < text_x1 + 10 + text_w1 and text_y1 - 10 < event.pos[1] < text_y1 + 10 + text_h1:
-                return direction, 1
-            elif event.type == pygame.MOUSEBUTTONDOWN and text_x2 - 10 < event.pos[
-                0] < text_x2 + 10 + text_w2 and text_y2 - 10 < event.pos[1] < text_y2 + 10 + text_h2:
-                return direction, 2
-        pygame.display.flip()
-        clock.tick(FPS)
+    def stop(self):
+        self.time = 0
 
 
-def load_level(filename):  # чтение уровня
-    filename = "data/" + filename
-    # читаем уровень, убирая символы перевода строки
-    with open(filename, 'r') as mapFile:
-        level_map = [line.strip('\n') for line in mapFile]
-    # и подсчитываем максимальную длину
-    max_width = max(map(len, level_map))
+class Wall(pygame.sprite.Sprite):  # класс стены
+    def __init__(self, pos_x, pos_y):
+        super().__init__(tiles_group, all_sprites, wall_group)
+        self.image = images['wall']
+        self.rect = self.image.get_rect().move(  # положение на экране
+            tile_width * pos_x, tile_height * pos_y)
+        self.mask = pygame.mask.from_surface(self.image)
+        self.im = ''
 
-    # дополняем каждую строку пустыми клетками ('№')
-    return list(map(lambda x: x.ljust(max_width, '-'), level_map))
+    def type(self):  # возвращает строку типа спрайта, нужно для использования спрайтов в матрице
+        return 'wall'
+
+
+class WallTriggerable(Wall):  # разрушаемая стена. Разрушается при смерти monster2
+    def __init__(self, pos_x, pos_y, key_trigger, monster_trigger):
+        super().__init__(pos_x, pos_y)
+        self.image = images['wallTrig']
+        self.pos_x, self.pos_y = pos_x, pos_y
+        self.status = True  # для разрушения стен
+        self.key_trigger, self.monster_trigger = key_trigger, monster_trigger
+
+    def update(self):
+        if (len(guard_monster_group) == 0 or not self.monster_trigger) and (
+                keys_not_collected == 0 or not self.key_trigger):  # если все monster2 мертвы, то стены рушатся
+            self.status = False
+            self.image = images['grass']
+
+    def type(self):
+        if self.status:
+            return 'wall'
+        else:
+            return 'empty'
 
 
 class BackgroundTile(pygame.sprite.Sprite):  # класс фоновой картинки, пришлось разделить его и класс стены
@@ -403,11 +183,6 @@ class Snare(BackgroundTile):  # ловушка, убивает персонаж�
         self.image = images['snare']  # изображение ловушки
         self.pos_x, self.pos_y = pos_x, pos_y
         snares_group.add(self)  # группа ловушек
-
-    # def make_move(self):
-    #     if (self.x_move == 0 ) and board[self.pos_x + self.x_move][self.pos_y + self.y_move].type() not in ['wall', 'blocked']:
-    #         board[self.pos_x + self.x_move][self.pos_y + self.y_move] = Blocked()
-    #
 
     def update(self):  # если попали в ловушку, то персонаж умирает
         if player.pos_x == self.pos_x and player.pos_y == self.pos_y:
@@ -463,40 +238,6 @@ class WinTeleport(BackgroundTile):  # отдельный финишный тел
         return 'empty'
 
 
-class Wall(pygame.sprite.Sprite):  # класс стены
-    def __init__(self, pos_x, pos_y):
-        super().__init__(tiles_group, all_sprites, wall_group)
-        self.image = images['wall']
-        self.rect = self.image.get_rect().move(  # положение на экране
-            tile_width * pos_x, tile_height * pos_y)
-        self.mask = pygame.mask.from_surface(self.image)
-        self.im = ''
-
-    def type(self):  # возвращает строку типа спрайта, нужно для использования спрайтов в матрице
-        return 'wall'
-
-
-class WallTriggerable(Wall):  # разрушаемая стена. Разрушается при смерти monster2
-    def __init__(self, pos_x, pos_y, key_trigger, monster_trigger):
-        super().__init__(pos_x, pos_y)
-        self.image = images['wallTrig']
-        self.pos_x, self.pos_y = pos_x, pos_y
-        self.status = True  # для разрушения стен
-        self.key_trigger, self.monster_trigger = key_trigger, monster_trigger
-
-    def update(self):
-        if (len(guard_monster_group) == 0 or not self.monster_trigger) and (
-                keys_not_collected == 0 or not self.key_trigger):  # если все monster2 мертвы, то стены рушатся
-            self.status = False
-            self.image = images['grass']
-
-    def type(self):
-        if self.status:
-            return 'wall'
-        else:
-            return 'empty'
-
-
 class Jewel(BackgroundTile):  # класс сокровищ
     def __init__(self, pos_x, pos_y):
         super().__init__(pos_x, pos_y)
@@ -524,11 +265,6 @@ class Jewel(BackgroundTile):  # класс сокровищ
                 weapon_lst.append(
                     BombWeapon('bomb_launcher', 'bomb', -50, -50, player, player_group, 10, FPS // 1.5, speed=13,
                                rang=400))
-            # weapon_lst.append(MagicWeapon('staff', 'blast', -50, -50, player, player_group, 1, FPS,
-            #                               area_width=1, name='меч'))
-            # добавляем зельку в инвентарь
-            # inventory.hp_potions += 1
-            # сокровище собрано, убираем его
             self.kill()
 
     def type(self):
@@ -567,22 +303,6 @@ class RagePotion(BackgroundTile):
 
     def type(self):
         return 'empty'
-
-
-class Empty:  # класс травы для матрицы
-    def __init__(self):
-        pass
-
-    def type(self):
-        return 'empty'
-
-
-class Blocked:  # класс стены для матрицы
-    def __init__(self):
-        pass
-
-    def type(self):
-        return 'blocked'
 
 
 class Player(pygame.sprite.Sprite):
@@ -732,8 +452,6 @@ class Player(pygame.sprite.Sprite):
 class Monster(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y, weapon, hp_max, rang_min, rang_max, image_name, close_mode, speed, dop_groups=[],
                  clever_shoot=False, is_mage=False):
-        # self.weapon = CloseWeapon('empty_image', 'close_attack', -50, -50, self, monster_group, 1, FPS // 2,
-        #                           rang=2.25)  # изменяемый
         weapon.owner = self
         weapon.fraction = monster_group  # чтобы не бил своих и не получал урона от ловушек
         self.action = 'standing'  # действие моба. изначально он стоит
@@ -745,8 +463,7 @@ class Monster(pygame.sprite.Sprite):
         self.image = images[image_name]  # для начала ставим любую картинку, чтобы появился self.rect
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
-        if type(self.weapon) == CloseWeapon or type(self.weapon) == BulletWeapon:
-            self.set_image(type(self.weapon))
+        self.set_image(type(self.weapon))
 
         self.hp_max = hp_max
         self.hp = self.hp_max
@@ -794,7 +511,8 @@ class Monster(pygame.sprite.Sprite):
                 else:
                     self.action = 'standing'
                     self.set_image(type(self.weapon))
-            elif type(self.weapon) == BulletWeapon:
+            elif type(self.weapon) == BulletWeapon or type(self.weapon) == BombWeapon or type(self.weapon) == \
+                    MagicWeapon:
                 if self.near_player and self.action != 'attack':  # если враг рядом, анимация ударов
                     self.action = 'attack'
                     self.set_image(type(self.weapon))
@@ -855,10 +573,6 @@ class Monster(pygame.sprite.Sprite):
                     self.next_cell = [self.pos_x - (next_cell[0] - self.pos_x),
                                       self.pos_y - (next_cell[1] - self.pos_y)]
                     x_move, y_move = -(next_cell[0] - self.pos_x), -(next_cell[1] - self.pos_y)
-                # elif (abs(self.pos_x - player.pos_x) == self.rang_min - 1 or abs(self.pos_y - player.pos_y) == self.rang_min - 1) and board[self.pos_x + (next_cell[1] - self.pos_y)][self.pos_y + (next_cell[0] - self.pos_x)].type() == 'empty':
-                #     x_move, y_move = next_cell[1] - self.pos_y, next_cell[0] - self.pos_x
-                #     self.next_cell = [self.pos_x + (next_cell[1] - self.pos_y), self.pos_y + (next_cell[0] - self.pos_x)]
-                #     print(x_move, y_move)
                 else:
                     x_move, y_move = 0, 0
                 if self.x_move == 0 and x_move != 0:
@@ -904,23 +618,14 @@ class Monster(pygame.sprite.Sprite):
             self.near_player = True
 
     def damage(self, n):  # функция получения урона, не нанесения
-        # if inventory.rage_timer.time:  # если действует зелье увеличения урона
-        #     self.hp -= n * 2  # то урон х2
-        # else:
-        #     self.hp -= n * 1
+        global sc
         self.hp = round((self.hp - n))
         # клеточка становится травой, монстр умирает
         if self.hp <= 0 or cheats:
             board[self.next_cell[0]][self.next_cell[1]] = Empty()
             board[self.pos_x][self.pos_y] = Empty()
-            # if True or random.random() > 0.1:
-            #     if random.random() > 0.5:
-            #         a = HealPotion(self.pos_x, self.pos_y)
-            #         print(self.pos_x, self.pos_y, a.rect.x, a.rect.y)
-            #     else:
-            #         a = RagePotion(self.pos_x, self.pos_y)
-            #         print(self.pos_x, self.pos_y, a.rect.x, a.rect.y)
             self.kill()
+            sc += 50
 
     def set_image(self, weapon):
         if weapon == CloseWeapon:
@@ -930,16 +635,16 @@ class Monster(pygame.sprite.Sprite):
             elif self.action == 'attack':  # моб атакует
                 self.cut_sheet(pygame.transform.scale(load_image('attack_close_mob1.png'), (200, 50)), 4,
                                1)
-        elif weapon == BulletWeapon:
+        elif weapon == BulletWeapon or weapon == MagicWeapon or weapon == BombWeapon:
             if self.action == 'standing':  # моб неактивен
                 self.cut_sheet(pygame.transform.scale(load_image('bullet_mob2.png'), (165, 25)), 5,
                                1)  # режем на квадратики по слайдам, функция
             elif self.action == 'running':  # моб бежит
-                self.cut_sheet(pygame.transform.scale(load_image('running_bullet_mob1.png'), (140, 25)), 5,
+                self.cut_sheet(pygame.transform.scale(load_image('running_bullet_mob2.png'), (140, 25)), 5,
                                1)  # режем на квадратики по слайдам
                 print(1)
             elif self.action == 'attack':  # дальний моб атакует
-                self.cut_sheet(pygame.transform.scale(load_image('attack_bullet_mob1.png'), (165, 25)), 5,
+                self.cut_sheet(pygame.transform.scale(load_image('attack_bullet_mob2.png'), (165, 25)), 5,
                                1)
         self.image = self.frames[self.cur_frame]  # устанавливаем начальную картинку
 
@@ -1167,10 +872,6 @@ class Weapon(pygame.sprite.Sprite):  # класс оружия
             self.timer.tick()
             if self.owner == player and inventory.rage_timer.time != 0:
                 self.timer.tick()
-
-    # def use(self):
-    #     if int(self.timer) == 0:
-    #         self.timer.start()
 
 
 class BulletWeapon(Weapon):  # дальнее оружие
@@ -1400,20 +1101,6 @@ def is_linear_path(x1, y1, x2, y2, owner=None, fraction=None, target=None, go_th
             else:
                 if (i.rect.collidepoint(x1 - field, y1 - field) or i.rect.collidepoint(x1 + field, y1 + field)):
                     return False
-        # if not go_through_entities:
-        #     for i in entity_group:
-        #         if field == 1:
-        #             if i.rect.collidepoint(x1, y1) and i != owner and i != target and i not in fraction:
-        #                 return False
-        #         else:
-        #             if (vector[0] >= 0) == (vector[1] >= 0):
-        #                 if (i.rect.collidepoint(x1 + field // 2, y1 - field // 2) or i.rect.collidepoint(
-        #                         x1 - field // 2, y1 + field // 2)) and i != owner and i != target and i not in fraction:
-        #                     return False
-        #             else:
-        #                 if (i.rect.collidepoint(x1 - field // 2, y1 - field // 2) or i.rect.collidepoint(
-        #                         x1 + field // 2, y1 + field // 2)) and i != owner and i != target and i not in fraction:
-        #                     return False
         x1 += vector[0]
         y1 += vector[1]
     return True
@@ -1512,7 +1199,6 @@ class StaticSprite(pygame.sprite.Sprite):  # для слотов инвента�
 
 
 class Inventory:  # класс иневентаря. В игре он снизу слева
-
     def __init__(self):
         self.current_slot = 0
         self.rage_timer = Timer(0)  # таймер для зелий увелмчения урона
@@ -1586,57 +1272,72 @@ class Inventory:  # класс иневентаря. В игре он снизу
         t = sum([j for j in level_counters[int(map_num // 1)]])
         text = font_for_inventory.render(
             f'Уровень {map_num + 1}: {t // 3600} мин, {t % 3600 // 60} сек',
-            True, (127, 127, 0)
+            True, pygame.Color('green')
         )
         screen.blit(text, (32, 32))  # выводим зеленым шрифтом цифру 1
         inventory.rage_timer.tick()  # если зелье активно, то уменьшаем время действия до 0. Иначе 0
 
 
-def draw_hp(entity):
-    pygame.draw.rect(screen, (255, 0, 0), (entity.rect.x, entity.rect.y - 20,
-                                           int(tile_width * (entity.hp / entity.hp_max)), 15))
-    pygame.draw.rect(screen, (0, 0, 0), (entity.rect.x, entity.rect.y - 20,
-                                         tile_width, 15), 2)
-    font = pygame.font.Font(None, 20)
-    text = font.render(str(entity.hp), True, pygame.Color('white'))
-    screen.blit(text, (entity.rect.x, entity.rect.y - text.get_height() - 20))
+class Score:  # класс счёта
+    def __init__(self, name=0):
+        if name != 0:  # если имя введено счёт берётся из базы данных
+            self.con = sqlite3.connect("scores.sqlite")
+            self.cur = self.con.cursor()
+            try:
+                self.s = int(self.cur.execute(f"""SELECT score FROM names
+                            WHERE name = '{name}'""").fetchall()[0][0])
+            except IndexError:
+                self.s = 0  # если счёта нет в базе данных
+            self.name = name
+        else:
+            self.s = 0  # если имя не введено
+            self.name = False
+
+    def add(self, other):  # увеличить счёт
+        self.s += other
+        if self.name:
+            self.cur.execute(f"""UPDATE Names SET score = '{str(self.s)}' WHERE name = '{self.name}'""")
+            self.con.commit()
+
+    def sub(self, other):  # уменьшить счёт
+        self.s -= other
+        if self.name:
+            self.cur.execute(f"""UPDATE Names SET score = '{str(self.s)}' WHERE name = '{self.name}'""")
+            self.con.commit()
+
+    def get_score(self):
+        return int(self.s)
+
+    def has_name(self):
+        return False if self.name is False else True
 
 
-fons = [pygame.transform.scale(load_image('fon1.jpg'), (WIDTH, HEIGHT)),
-        pygame.transform.scale(load_image('fon2.jpg'), (WIDTH, HEIGHT)),
-        pygame.transform.scale(load_image('fon3.jpg'), (WIDTH, HEIGHT))]
 direction, state = start_screen()  # стартовое окно
 fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
 if state == 2:  # 2я кнопка = выход из игры
     terminate()
+elif str(state) == state:
+    score = Score(name=state)
+elif state == 0:
+    score = Score()
 is_start = True
 while True:
-    hp_potions = 0
-    rage_potions = 0
     if not is_start:
         direction = [0, 0]
     is_start = False
     game_running = True
-    animation_group = pygame.sprite.Group()
-    all_sprites = pygame.sprite.Group()
-    player_group = pygame.sprite.Group()
-    entity_group = pygame.sprite.Group()
-    static_sprites = pygame.sprite.Group()
-    weapon_group = pygame.sprite.Group()
     player = Player(0, 0)
-    time_counter = 0
-    level_counters = [[0 for _ in range(i)] for i in [1, 1, 1, 3, 3]]
     is_won = False
     weapon_lst = [CloseWeapon('sword', 'close_attack1', -50, -50, player, player_group, 20, FPS // 2,
                               rang=4, name='меч')]
     cheats = False
-
     for map_num, map_name in enumerate(['map.txt', 'map1.txt', 'map2.txt', 'map3', 'map4']):
         level_running = True
         save_potions = [hp_potions, rage_potions]
         save_hp = player.hp
         save_weapons = weapon_lst.copy()
         map_num_save, map_name_save = map_num, map_name
+        player.change_weapon(0)
         while level_running:
             map_num, map_name = map_num_save, map_name_save
             player.is_killed = False
@@ -1680,9 +1381,15 @@ while True:
                 font_for_inventory = pygame.font.Font(None, 22)
                 pause_btn = StaticSprite(WIDTH - inventory_slot_width, HEIGHT - inventory_slot_width,
                                          'pause')  # справа снизу
+                player.change_weapon(0)
                 while level_running and life_running:
-                    time_counter += 1  # для вывода времени
+                    time_counter += 1  # для вывода времениw
                     level_counters[int(map_num // 1)][int(map_num % 1 * 10)] += 1
+                    if sc != 0:  # счёт за убитых монстров
+                        score.add(sc)
+                        sc = 0
+                    if score.get_score() != 0 and time_counter % 100 == 0:  # вычитание счёта за время
+                        score.sub(1)
                     # изменяем ракурс камеры
                     # внутри игрового цикла ещё один цикл
                     # приёма и обработки сообщений
@@ -1729,6 +1436,7 @@ while True:
                             direction[0] += direction_new[0]
                             direction[1] += direction_new[1]
                             if state == 1:
+                                level_counters = [[0 for _ in range(i)] for i in [1, 1, 1, 3, 3]]
                                 player.is_killed = True
                             elif state == 2:
                                 terminate()
@@ -1777,12 +1485,16 @@ while True:
                         if event.type == pygame.KEYUP:  # убираем движение по направлениям, если клавишу отпустили
                             if event.key == pygame.K_w:
                                 direction[1] += 1
+                                player.stop_move()
                             if event.key == pygame.K_d:
                                 direction[0] -= 1
+                                player.stop_move()
                             if event.key == pygame.K_s:
                                 direction[1] -= 1
+                                player.stop_move()
                             if event.key == pygame.K_a:
                                 direction[0] += 1
+                                player.stop_move()
                     for i in range(len(weapon_lst)):
                         weapon_lst[i].rect.x = inventory_slot_width * i
                         weapon_lst[i].rect.y = HEIGHT - inventory_slot_width
@@ -1820,6 +1532,11 @@ while True:
                     attack_group.draw(screen)
                     for i in entity_group:  # всем сущностям и герою выводим полоску хп
                         draw_hp(i)
+                    font = pygame.font.Font(None, 22)
+                    string_rendered = font.render(f'Счёт: {score.get_score()}', 1, pygame.Color('green'))
+                    intro_rect = string_rendered.get_rect()
+                    text_coords = [10, 650]
+                    screen.blit(string_rendered, (30, 10))
                     # обновляем инвентарь
                     animation_group.draw(screen)
                     static_sprites.draw(screen)
@@ -1828,17 +1545,25 @@ while True:
                     pygame.display.flip()
                     # при смерти экран поражения
                     if player.is_killed:
+                        player.change_weapon(0)
+                        score.sub(score.s)  # вычитание счёта за смерть
                         break
                         life_running = False
         if game_running == False:
             break
     # при победе экран победы
     if is_won:
-        direction_new, state = win_screen()
+        sc = score.get_score()
+        if score.has_name():
+            direction_new, state = win_screen(score.s, time_counter, name=state)  #########
+        direction_new, state = win_screen(score.s, time_counter)  #########
         direction[0] += direction_new[0]
         direction[1] += direction_new[1]
         if state == 0:
             is_start = True
+            score.sub(score.s)
+            rage_potions, hp_potions = 0, 0
+            level_counters = [[0 for _ in range(i)] for i in [1, 1, 1, 3, 3]]
             game_running = False
         elif state == 2:
             terminate()
