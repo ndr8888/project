@@ -48,7 +48,7 @@ images = {
     'bomb': load_image('bomb2.png'),  # бомба, оружие
     'pause': pygame.transform.scale(load_image('pause.png'), (inventory_slot_width, inventory_slot_width)),  # пауза
     'snare': load_image('snare.png'),  # ловушка,
-    'heal_zone': pygame.transform.scale(load_image('heal_zone.png'), (tile_width, tile_height))  # ловушка,
+    'heal_zone': pygame.transform.scale(load_image('heal_zone.png'), (tile_width, tile_height))  # зона исцеления,
 }
 
 
@@ -98,7 +98,7 @@ class AnimatedSprite(pygame.sprite.Sprite):  # спецэффекты
         self.image = self.frames[self.cur_frame]
 
 
-class Timer:  # класс для засекания времени
+class Timer:  # класс для засечения времени
     def __init__(self, time_max):  # подаем время, на которое засекаем таймер
         self.time_max = time_max
         self.time = 0
@@ -128,7 +128,7 @@ class Wall(pygame.sprite.Sprite):  # класс стены
         return 'wall'
 
 
-class WallTriggerable(Wall):  # разрушаемая стена. Разрушается при смерти monster2
+class WallTriggerable(Wall):  # разрушаемая стена. Разрушается при сборе всех ключей или убийстве всех монстров
     def __init__(self, pos_x, pos_y, key_trigger, monster_trigger):
         super().__init__(pos_x, pos_y)
         self.image = images['wallTrig']
@@ -207,7 +207,7 @@ class Teleport(BackgroundTile):  # класс телепорта
         return 'empty'
 
 
-class HealZone(BackgroundTile):  # класс телепорта
+class HealZone(BackgroundTile):  # класс зоны исцеления
     def __init__(self, pos_x, pos_y):
         super().__init__(pos_x, pos_y)  # положение
         self.image = images['heal_zone']
@@ -271,6 +271,7 @@ class Jewel(BackgroundTile):  # класс сокровищ
         return 'empty'
 
 
+# класс зелья исцеления на карте
 class HealPotion(BackgroundTile):
     def __init__(self, pos_x, pos_y):
         super().__init__(pos_x, pos_y)
@@ -288,6 +289,7 @@ class HealPotion(BackgroundTile):
         return 'empty'
 
 
+# класс зелья ярости на карте
 class RagePotion(BackgroundTile):
     def __init__(self, pos_x, pos_y):
         super().__init__(pos_x, pos_y)
@@ -305,6 +307,7 @@ class RagePotion(BackgroundTile):
         return 'empty'
 
 
+# класс игрока
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         self.speed = 8
@@ -327,7 +330,7 @@ class Player(pygame.sprite.Sprite):
         self.x_move, self.y_move = 0, 0
         self.x, self.y = self.rect.topleft
         self.is_killed = False  # живой
-        self.stop = True
+        self.stop = True # стоит
         self.rev = False
 
     def set_at_position(self, pos_x, pos_y):  # передвижение
@@ -424,13 +427,13 @@ class Player(pygame.sprite.Sprite):
             if self.rev:
                 self.image = pygame.transform.flip(self.image, flip_x=True, flip_y=False)
 
-    def damage(self, n):
+    def damage(self, n):  # функция получения урона
         if not cheats:
             self.hp = round((self.hp - n))
             if self.hp <= 0:
                 self.is_killed = True
 
-    def cut_sheet(self, sheet, columns, rows):
+    def cut_sheet(self, sheet, columns, rows):  # создаем список с изображениями
         self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
                                 sheet.get_height() // rows)
         for j in range(rows):
@@ -441,17 +444,19 @@ class Player(pygame.sprite.Sprite):
                     frame_location, self.rect.size)))
             self.frames.append(row)
 
-    def change_weapon(self, slot):
+    def change_weapon(self, slot):  # cмена оружия
         self.cur_weapon = slot
         self.image = self.frames[int(self.cur_frame)][self.cur_weapon]
 
-    def stop_move(self):
+    def stop_move(self):  # для того, чтобы анимация всегда была завершена
         self.stop = True
 
 
+# класс монстров, характеристики передаются в init
 class Monster(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y, weapon, hp_max, rang_min, rang_max, image_name, close_mode, speed, dop_groups=[],
                  clever_shoot=False, is_mage=False):
+        super().__init__(monster_group, all_sprites, entity_group, *dop_groups)
         weapon.owner = self
         weapon.fraction = monster_group  # чтобы не бил своих и не получал урона от ловушек
         self.action = 'standing'  # действие моба. изначально он стоит
@@ -463,7 +468,7 @@ class Monster(pygame.sprite.Sprite):
         self.image = images[image_name]  # для начала ставим любую картинку, чтобы появился self.rect
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
-        self.set_image(type(self.weapon))
+        self.set_image(type(self.weapon))  # ставим картинку в зависимости от его оружия
 
         self.hp_max = hp_max
         self.hp = self.hp_max
@@ -477,7 +482,6 @@ class Monster(pygame.sprite.Sprite):
 
         self.x_move, self.y_move = 0, 0
         self.pos_x, self.pos_y = pos_x, pos_y
-        super().__init__(monster_group, all_sprites, entity_group, *dop_groups)
         self.mask = pygame.mask.from_surface(self.image)
         self.next_cell = 0, 0
         self.x, self.y = self.rect.topleft
@@ -627,7 +631,7 @@ class Monster(pygame.sprite.Sprite):
             self.kill()
             sc += 50
 
-    def set_image(self, weapon):
+    def set_image(self, weapon):  # выбираем картинку в зависимости от оружия
         if weapon == CloseWeapon:
             if self.action == 'standing':  # моб неактивен
                 self.cut_sheet(pygame.transform.scale(load_image('close_mob2.png'), (200, 50)), 4,
@@ -659,6 +663,7 @@ class Monster(pygame.sprite.Sprite):
                     frame_location, self.rect.size)), (tile_width, tile_height)))
 
 
+# босс, который создает монстров и стреляет как из пулемёта
 class Necromancer(Monster):
     def __init__(self, *args, spawn_time, **kwargs):
         super().__init__(*args, **kwargs)
@@ -672,11 +677,12 @@ class Necromancer(Monster):
         self.wait_timer.tick()
         if self.wait_timer.time == 0:
             self.spawn_timer.tick()
-            if self.spawn_timer.time == 0 and len(spawned_monsters) <= 4:
+            if self.spawn_timer.time == 0 and len(spawned_monsters) <= 4:  # если КД прошло и монстров меньше 4
                 for _ in range(2):
                     cells = [(self.pos_x + 1, self.pos_y), (self.pos_x, self.pos_y - 1), (self.pos_x - 1, self.pos_y),
                              (self.pos_x, self.pos_y - 1)]
                     random.shuffle(cells)
+                    # создаем ещё монстров
                     for i in cells:
                         print(board[i[0]][i[1]].type(), i)
                         if board[i[0]][i[1]].type() == 'empty':
@@ -857,7 +863,7 @@ class Bomb(pygame.sprite.Sprite):  # бомба, бьёт по области
             self.kill()
 
 
-class Weapon(pygame.sprite.Sprite):  # класс оружия
+class Weapon(pygame.sprite.Sprite):  # класс оружий
     def __init__(self, icon, attack_picture, x, y, owner, fraction, damage, cooldown):
         super().__init__(all_sprites, static_sprites, weapon_group)
         self.owner, self.fraction, self.damage = owner, fraction, damage
@@ -929,7 +935,7 @@ class CloseWeapon(Weapon):  # оружие ближнего боя
                         self.owner, self.fraction, self.damage)
 
 
-class BombWeapon(Weapon):  # оружие - бомбы
+class BombWeapon(Weapon):  # гранатомёт
     def __init__(self, *args, speed=10, rang=tile_width * 8, bullet_size=(25, 25), area_width=4, name='',
                  blast_image='boom'):
         self.name = name
@@ -948,7 +954,7 @@ class BombWeapon(Weapon):  # оружие - бомбы
                  self.speed, self.rang, self.bullet_size, self.area_width, self.blast_image)
 
 
-def generate_level(level):
+def generate_level(level):  # создание файла по таблице
     x, y = None, None
     table = [[] for _ in range(len(level[0]))]
     for y in range(len(level)):
@@ -963,13 +969,13 @@ def generate_level(level):
             elif level[y][x] == 'T':  # телепорт на следующий уровень
                 BackgroundTile(x, y)
                 table[x].append(Teleport(x, y))
-            elif level[y][x] == 'W':  # телепорт при прохождении всей игры
+            elif level[y][x] == 'W':  # телепорт при победе
                 BackgroundTile(x, y)
                 table[x].append(WinTeleport(x, y))
-            elif level[y][x] == 'K':  # ключ, чтобы открылся телепорт на следующий уровень
+            elif level[y][x] == 'K':  # ключ
                 BackgroundTile(x, y)
                 table[x].append(Key(x, y))
-            elif level[y][x] == '%':  # стена, которая разрушится, если умрёт страж
+            elif level[y][x] == '%':  # стена, которая может рушиться
                 table[x].append(WallTriggerable(x, y, True if map_num in [1, 2] else False,
                                                 True if map_num in [0, 3, 3.2, 4] else False))
             elif level[y][x] == '@':  # игрок
@@ -979,16 +985,16 @@ def generate_level(level):
             elif level[y][x] == 'J':  # сокровище
                 BackgroundTile(x, y)
                 table[x].append(Jewel(x, y))
-            elif level[y][x] == 'H':  # сокровище
+            elif level[y][x] == 'H':  # зелье здоровья
                 BackgroundTile(x, y)
                 table[x].append(HealPotion(x, y))
-            elif level[y][x] == 'R':  # сокровище
+            elif level[y][x] == 'R':  # зелье ярости
                 BackgroundTile(x, y)
                 table[x].append(RagePotion(x, y))
             elif level[y][x] == 'S':  # ловушка
                 BackgroundTile(x, y)
                 table[x].append(Snare(x, y))
-            elif level[y][x] == 'Z':  # ловушка
+            elif level[y][x] == 'Z':  # зона исцеления
                 BackgroundTile(x, y)
                 table[x].append(HealZone(x, y))
             elif level[y][x] == '1':  # монстр ближнего боя
@@ -1004,7 +1010,7 @@ def generate_level(level):
                                         BulletWeapon('empty_image', 'blast', -50, -50, None, monster_group, 10, FPS,
                                                      speed=10, rang=400), 60, 5, 9, 'monster1', False, 11,
                                         dop_groups=[] if map_num not in [0, 3.2] else [guard_monster_group]))
-            elif level[y][x] == '3':  # монстр, при убийстве которого разрушается некоторая стена
+            elif level[y][x] == '3':  # монстр с другими характеристиками
                 BackgroundTile(x, y)
                 table[x].append(
                     Monster(x, y, BulletWeapon('empty_image', 'blast', -50, -50, None, monster_group, 13, FPS, speed=15,
@@ -1017,41 +1023,41 @@ def generate_level(level):
                                                    speed=8, rang=300, area_width=3.5), 80, 5, 9, 'monster1', False, 10,
                                         clever_shoot=True,
                                         dop_groups=[] if map_num not in [0, 3.2] else [guard_monster_group]))
-            elif level[y][x] == '5':  # монстр ближнего боя
+            elif level[y][x] == '5':  # монстр ближнего боя, другие характеристики
                 BackgroundTile(x, y)
                 table[x].append(
                     Monster(x, y,
                             CloseWeapon('empty_image', 'close_attack2', -50, -50, None, monster_group, 10, FPS // 1.5,
                                         rang=2.5), 60, 1, 9, 'monster', True, 8,
                             dop_groups=[] if map_num not in [0, 3.2] else [guard_monster_group]))
-            elif level[y][x] == '':  # монстр дальнего боя
+            elif level[y][x] == '':  # монстр дальнего боя, другие характеристики
                 BackgroundTile(x, y)
                 table[x].append(Monster(x, y,
                                         MagicWeapon('empty_image', 'bullet', -50, -50, None, monster_group, 10, FPS,
                                                     rang=400, area_width=1.5, ), 60, 5, 9, 'monster1', False, 11,
                                         dop_groups=[] if map_num not in [0, 3.2] else [guard_monster_group]))
-            elif level[y][x] == '7':  # монстр ближнего боя
+            elif level[y][x] == '7':  # монстр ближнего боя, другие характеристики
                 BackgroundTile(x, y)
                 table[x].append(
                     Monster(x, y,
                             CloseWeapon('empty_image', 'close_attack', -50, -50, None, monster_group, 10, FPS,
                                         rang=3.5), 100, 3, 7, 'monster', True, 12,
                             dop_groups=[] if map_num not in [0, 3.2] else [guard_monster_group]))
-            elif level[y][x] == '8':  # монстр, при убийстве которого разрушается некоторая стена
+            elif level[y][x] == '8':  # монстр дальнего боя, другие характеристики
                 BackgroundTile(x, y)
                 table[x].append(
                     Monster(x, y, BulletWeapon('empty_image', 'blast', -50, -50, None, monster_group, 13, FPS, speed=25,
                                                rang=tile_width * 30, bullet_size=(tile_width, tile_width)), 100,
                             tile_width * 30, tile_width * 30, 'monster2', False, math.inf,
                             dop_groups=[] if map_num not in [0, 3.2] else [guard_monster_group], clever_shoot=False))
-            elif level[y][x] == '9':  # монстр ближнего боя
+            elif level[y][x] == '9':  # монстр ближнего боя, другие характеристики
                 BackgroundTile(x, y)
                 table[x].append(
                     Monster(x, y,
                             CloseWeapon('empty_image', 'close_attack1', -50, -50, None, monster_group, 15, FPS // 1.5,
                                         rang=4), 200, 2, 15, 'monster', True, 8,
                             dop_groups=[guard_monster_group]))
-            elif level[y][x] == 'N':  # монстр, при убийстве которого разрушается некоторая стена
+            elif level[y][x] == 'N':  # босс
                 BackgroundTile(x, y)
                 table[x].append(
                     Necromancer(x, y, BulletWeapon('empty_image', 'blast', -50, -50, None, monster_group, 13, FPS // 2,
@@ -1084,6 +1090,7 @@ class Camera:
         self.dy_total += self.dy
 
 
+# поиск пути из одной точки в другую
 def is_linear_path(x1, y1, x2, y2, owner=None, fraction=None, target=None, go_through_entities=False, field=1):
     a = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
     vector = ((x2 - x1) / a * 2, (y2 - y1) / a * 2)
@@ -1106,7 +1113,8 @@ def is_linear_path(x1, y1, x2, y2, owner=None, fraction=None, target=None, go_th
     return True
 
 
-class Board:  # класс матрицы доски
+# класс матрицы доски
+class Board:
     def __init__(self, table):
         self.table = table  # сама матрица
         self.width = len(table)
@@ -1221,16 +1229,16 @@ class Inventory:  # класс иневентаря. В игре он снизу
         if self.current_slot < len(weapon_lst):
             weapon_lst[self.current_slot].use(*pos)
 
-    def plus_hp_potion(self):  # +1 зелье, которое лечит 5хп
-        global hp_potions, rage_potions
+    def plus_hp_potion(self):  # +1 зелье, которое лечит 50хп
+        global hp_potions
         hp_potions += 1
 
-    def plus_rage_potion(self):  # +1 зелье, которое увеличивает урон в 2 раза на 10 сек
-        global hp_potions, rage_potions
+    def plus_rage_potion(self):  # +1 зелье, которое увеличивает скорость атаки в 2 раза
+        global rage_potions
         rage_potions += 1
 
     def hp_plus(self):
-        global hp_potions, rage_potions
+        global hp_potions
         if hp_potions:  # если есть зелье хп
             if player.hp + 50 <= player.hp_max:  # добавляем 5хп, если не привысим максимальное кол-во хп
                 player.hp += 50  # +5 хп
@@ -1240,13 +1248,14 @@ class Inventory:  # класс иневентаря. В игре он снизу
                 hp_potions -= 1  # -1 зелье, которое лечит 5 хп
 
     def plus_damage(self):
-        global hp_potions, rage_potions
+        global rage_potions
         if rage_potions and self.rage_timer.time == 0:  # если есть зелье ярости и оно неактивно
             rage_potions -= 1  # поглощаем 1 зелье
             self.rage_timer = Timer(FPS * 5)  # заводим таймер на 10 сек (60 тиков в секунду)
             self.rage_timer.start()  # начинаем отсчёт
 
     def quantity_rendering(self):  # отображение всего инвентаря
+        # если зелья есть, выводим их картинку. Если их нет - картинку не выводим
         if hp_potions != 0:
             self.hp_potion_sprite.image = images['health_potion']
         else:
@@ -1268,7 +1277,7 @@ class Inventory:  # класс иневентаря. В игре он снизу
             "               E            Q", True, (0, 255, 0)
         )  # для сохранения места в памяти и коде
         screen.blit(text, (
-            inventory_slot_width - 8, HEIGHT - inventory_slot_width - 14))  # выводим зеленым шрифтом цифру 1
+            inventory_slot_width - 8, HEIGHT - inventory_slot_width - 14))  # выводим зеленым шрифтом цифры
         t = sum([j for j in level_counters[int(map_num // 1)]])
         text = font_for_inventory.render(
             f'Уровень {map_num + 1}: {t // 3600} мин, {t % 3600 // 60} сек',
@@ -1390,9 +1399,6 @@ while True:
                         sc = 0
                     if score.get_score() != 0 and time_counter % 100 == 0:  # вычитание счёта за время
                         score.sub(1)
-                    # изменяем ракурс камеры
-                    # внутри игрового цикла ещё один цикл
-                    # приёма и обработки сообщений
                     for event in pygame.event.get():
                         # при закрытии окна
                         if event.type == pygame.QUIT:
@@ -1406,7 +1412,7 @@ while True:
                             is_clicked_r = True
                         if event.type == pygame.MOUSEBUTTONUP and event.button == 3:
                             is_clicked_r = False
-                        # выбор оружия клавишами 1 - 4, если такое оружия имеются у игрока
+                        # выбор оружия клавишами 1 - 5, если такое оружия имеются у игрока
                         if event.type == pygame.KEYDOWN and event.key == pygame.K_1:
                             inventory.current_slot = 0
                             inventory.weapon_frame.rect.x = 0
@@ -1435,22 +1441,25 @@ while True:
                             direction_new, state = pause_screen()
                             direction[0] += direction_new[0]
                             direction[1] += direction_new[1]
+                            # если нажали "Начать заново"
                             if state == 1:
-                                level_counters = [[0 for _ in range(i)] for i in [1, 1, 1, 3, 3]]
                                 player.is_killed = True
+                            # если нажали "Выйти из игры"
                             elif state == 2:
                                 terminate()
                             is_clicked_r, is_clicked_l = False, False
                         # читы
                         if event.type == pygame.KEYDOWN and event.key == pygame.K_0:
                             cheats = not cheats
+
                         # направление атаки
                         if event.type == pygame.MOUSEMOTION:
                             pos = event.pos
 
-                        if event.type == pygame.KEYDOWN and event.key == pygame.K_e:  # восстанавливает до 5хп
+                        if event.type == pygame.KEYDOWN and event.key == pygame.K_e:  # восстанавливает до 50хп
                             inventory.hp_plus()
 
+                        # cмена оружий колесиком мыши
                         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 4:
                             if inventory.current_slot != 0:
                                 inventory.current_slot -= 1
@@ -1462,7 +1471,7 @@ while True:
                                 player.change_weapon(inventory.current_slot)
                         if event.type == pygame.KEYDOWN and event.key == pygame.K_q:  # активирует зелье урона
                             inventory.plus_damage()
-
+                        # cмена оружий колесиком в другую сторону
                         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 5:
                             if inventory.current_slot != len(weapon_lst) - 1:
                                 inventory.current_slot += 1

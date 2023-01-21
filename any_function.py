@@ -78,7 +78,7 @@ def start_screen():  # начальное окно
 
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:  # назначаем движение
-                if event.key == pygame.K_RETURN:  # завершение ввода прм нажатии клавиши enter
+                if event.key == pygame.K_RETURN:  # завершение ввода имени прм нажатии клавиши enter
                     if len(name) == 0:
                         name = False
                     name_inputing = False
@@ -109,6 +109,7 @@ def start_screen():  # начальное окно
                     direction[0] += 1
             if event.type == pygame.QUIT:
                 terminate()
+            # нажатия на "кнопки"
             elif event.type == pygame.MOUSEBUTTONDOWN and text_x - 10 < event.pos[
                 0] < text_x + 10 + text_w and text_y - 10 < event.pos[1] < text_y + 10 + text_h:
                 if name:
@@ -147,6 +148,7 @@ def start_screen():  # начальное окно
 def win_screen(sc, time_counter, name=False):  # окно победы, принцип тот же, что и в функции выше
     print(level_counters)
     direction = [0, 0]
+    # результаты
     a = [
         f'Уровень {i + 1}: {sum([j for j in level_counters[i]]) // 3600} мин ' +
         f'{sum([j for j in level_counters[i]]) % 3600 // 60} сек '
@@ -154,7 +156,6 @@ def win_screen(sc, time_counter, name=False):  # окно победы, прин
     intro_text = ["ИГРА ПРОЙДЕНА",
                   f"Время: {time_counter // 3600} мин {time_counter % 3600 // 60} сек",
                   "Всего:"] + a + [f'Счёт: {sc}']
-    print(a)
     fon = random.choice(fons)
     screen.blit(fon, (0, 0))
     name_inputing, score_not_saved = False, True
@@ -167,7 +168,6 @@ def win_screen(sc, time_counter, name=False):  # окно победы, прин
             intro_rect = string_rendered.get_rect()
             text_coords[1] += 10
             intro_rect.top = text_coords[1]
-            # intro_rect.x = text_coords[0] - intro_rect.w // 2
             intro_rect.x = text_coords[0]
             text_coords[1] += intro_rect.height
             screen.blit(string_rendered, intro_rect)
@@ -241,7 +241,7 @@ def win_screen(sc, time_counter, name=False):  # окно победы, прин
                 return direction, 0
             elif event.type == pygame.MOUSEBUTTONDOWN and text_x2 - 10 < event.pos[
                 0] < text_x2 + 10 + text_w2 and text_y2 - 10 < event.pos[1] < text_y2 + 10 + text_h2:
-                return direction, 2
+                return direction, 2 
             elif event.type == pygame.MOUSEBUTTONDOWN and text_x3 - 10 < event.pos[
                 0] < text_x3 + 10 + text_w3 and text_y3 - 10 < event.pos[1] < text_y3 + 10 + text_h3 and\
                     score_not_saved:
@@ -370,7 +370,7 @@ def pause_screen():  # окно паузы, принцип тот же, что �
         clock.tick(FPS)
 
 
-def load_level(filename):  # чтение уровня
+def load_level(filename):  # чтение уровня из .txt
     filename = "data/" + filename
     # читаем уровень, убирая символы перевода строки
     with open(filename, 'r') as mapFile:
@@ -382,7 +382,7 @@ def load_level(filename):  # чтение уровня
     return list(map(lambda x: x.ljust(max_width, '-'), level_map))
 
 
-def draw_hp(entity):
+def draw_hp(entity):  # отрисовка хп
     pygame.draw.rect(screen, (255, 0, 0), (entity.rect.x, entity.rect.y - 20,
                                            int(tile_width * (entity.hp / entity.hp_max)), 15))
     pygame.draw.rect(screen, (0, 0, 0), (entity.rect.x, entity.rect.y - 20,
