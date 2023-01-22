@@ -959,10 +959,7 @@ def generate_level(level):  # создание файла по таблице
     table = [[] for _ in range(len(level[0]))]
     for y in range(len(level)):
         for x in range(len(level[y])):
-            if level[y][x] == '.':  # трава
-                BackgroundTile(x, y)
-                table[x].append(Empty())
-            elif level[y][x] == '#':  # стена
+            if level[y][x] == '#':  # стена
                 table[x].append(Wall(x, y))
             elif level[y][x] == ' ' or level[y][x] == '-':
                 table[x].append(Empty())
@@ -985,10 +982,10 @@ def generate_level(level):  # создание файла по таблице
             elif level[y][x] == 'J':  # сокровище
                 BackgroundTile(x, y)
                 table[x].append(Jewel(x, y))
-            elif level[y][x] == 'H':  # зелье здоровья
+            elif level[y][x] == 'H' or (level[y][x] == 'h' and state):  # зелье здоровья
                 BackgroundTile(x, y)
                 table[x].append(HealPotion(x, y))
-            elif level[y][x] == 'R':  # зелье ярости
+            elif level[y][x] == 'R' or (level[y][x] == 'r' and state):  # зелье ярости
                 BackgroundTile(x, y)
                 table[x].append(RagePotion(x, y))
             elif level[y][x] == 'S':  # ловушка
@@ -997,46 +994,46 @@ def generate_level(level):  # создание файла по таблице
             elif level[y][x] == 'Z':  # зона исцеления
                 BackgroundTile(x, y)
                 table[x].append(HealZone(x, y))
-            elif level[y][x] == '1':  # монстр ближнего боя
+            elif level[y][x] == '1' or (level[y][x] == 'a' and state):  # монстр ближнего боя
                 BackgroundTile(x, y)
                 table[x].append(
                     Monster(x, y,
                             CloseWeapon('empty_image', 'close_attack1', -50, -50, None, monster_group, 15, FPS,
                                         rang=3), 80, 2, 7, 'monster', True, 11,
                             dop_groups=[] if map_num != 0 else [guard_monster_group]))
-            elif level[y][x] == '2':  # монстр дальнего боя
+            elif level[y][x] == '2' or (level[y][x] == 'b' and state):  # монстр дальнего боя
                 BackgroundTile(x, y)
                 table[x].append(Monster(x, y,
                                         BulletWeapon('empty_image', 'blast', -50, -50, None, monster_group, 10, FPS,
                                                      speed=10, rang=400), 60, 5, 9, 'monster1', False, 11,
                                         dop_groups=[] if map_num not in [0, 3.2] else [guard_monster_group]))
-            elif level[y][x] == '3':  # монстр с другими характеристиками
+            elif level[y][x] == '3' or (level[y][x] == 'c' and state):  # монстр с другими характеристиками
                 BackgroundTile(x, y)
                 table[x].append(
                     Monster(x, y, BulletWeapon('empty_image', 'blast', -50, -50, None, monster_group, 13, FPS, speed=15,
                                                rang=500), 150, 8, 8, 'monster2', False, 30,
                             dop_groups=[guard_monster_group], clever_shoot=True))
-            elif level[y][x] == '4':  # монстр, который кидает бомбы
+            elif level[y][x] == '4' or (level[y][x] == 'd' and state):  # монстр, который кидает бомбы
                 BackgroundTile(x, y)
                 table[x].append(Monster(x, y,
                                         BombWeapon('empty_image', 'bomb', -50, -50, None, monster_group, 10, FPS,
                                                    speed=8, rang=300, area_width=3.5), 80, 5, 9, 'monster1', False, 10,
                                         clever_shoot=True,
                                         dop_groups=[] if map_num not in [0, 3.2] else [guard_monster_group]))
-            elif level[y][x] == '5':  # монстр ближнего боя, другие характеристики
+            elif level[y][x] == '5'or (level[y][x] == 'e' and state):  # монстр ближнего боя, другие характеристики
                 BackgroundTile(x, y)
                 table[x].append(
                     Monster(x, y,
                             CloseWeapon('empty_image', 'close_attack2', -50, -50, None, monster_group, 10, FPS // 1.5,
                                         rang=2.5), 60, 1, 9, 'monster', True, 8,
                             dop_groups=[] if map_num not in [0, 3.2] else [guard_monster_group]))
-            elif level[y][x] == '':  # монстр дальнего боя, другие характеристики
+            elif level[y][x] == '6'or (level[y][x] == 'f' and state):  # монстр дальнего боя, другие характеристики
                 BackgroundTile(x, y)
                 table[x].append(Monster(x, y,
                                         MagicWeapon('empty_image', 'bullet', -50, -50, None, monster_group, 10, FPS,
                                                     rang=400, area_width=1.5, ), 60, 5, 9, 'monster1', False, 11,
                                         dop_groups=[] if map_num not in [0, 3.2] else [guard_monster_group]))
-            elif level[y][x] == '7':  # монстр ближнего боя, другие характеристики
+            elif level[y][x] == '7'or (level[y][x] == 'g' and state):  # монстр ближнего боя, другие характеристики
                 BackgroundTile(x, y)
                 table[x].append(
                     Monster(x, y,
@@ -1057,7 +1054,7 @@ def generate_level(level):  # создание файла по таблице
                             CloseWeapon('empty_image', 'close_attack1', -50, -50, None, monster_group, 15, FPS // 1.5,
                                         rang=4), 200, 2, 15, 'monster', True, 8,
                             dop_groups=[guard_monster_group]))
-            elif level[y][x] == 'N':  # босс
+            elif level[y][x] == 'N' or (level[y][x] == 'n' and state):  # босс
                 BackgroundTile(x, y)
                 table[x].append(
                     Necromancer(x, y, BulletWeapon('empty_image', 'blast', -50, -50, None, monster_group, 13, FPS // 2,
@@ -1065,6 +1062,9 @@ def generate_level(level):  # создание файла по таблице
                                                    rang=tile_width * 100, bullet_size=(tile_width, tile_height)), 350,
                                 10, 100, 'monster2', False, 50, spawn_time=FPS * 9, is_mage=True,
                                 dop_groups=[guard_monster_group], clever_shoot=True))
+            else:
+                BackgroundTile(x, y)
+                table[x].append(Empty())
     # вернем игрока, а также координаты игрока
     return Board(table), player_coords[0], player_coords[1]
 
