@@ -75,16 +75,6 @@ def start_screen():  # начальное окно
         screen.blit(text, (text_x3, text_y3))
         pygame.draw.rect(screen, (0, 255, 0), (text_x3 - 10, text_y3 - 10,
                                                text_w3 + 20, text_h3 + 20), 3)
-        
-        font = pygame.font.Font(None, 50)
-        text = font.render("Начать игру в сложном режиме", True, (100, 255, 100))
-        text_x5 = WIDTH // 2 - text.get_width() // 2
-        text_y5 = HEIGHT // 2 - text.get_height() // 2
-        text_w5 = text.get_width()
-        text_h5 = text.get_height()
-        screen.blit(text, (text_x5, text_y5))
-        pygame.draw.rect(screen, (0, 255, 0), (text_x5 - 10, text_y5 - 10,
-                                               text_w5 + 20, text_h5 + 20), 3)
 
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:  # назначаем движение
@@ -128,9 +118,6 @@ def start_screen():  # начальное окно
             elif event.type == pygame.MOUSEBUTTONDOWN and text_x2 - 10 < event.pos[
                 0] < text_x2 + 10 + text_w2 and text_y2 - 10 < event.pos[1] < text_y2 + 10 + text_h2:
                 return direction, 2
-            elif event.type == pygame.MOUSEBUTTONDOWN and text_x5 - 10 < event.pos[
-                0] < text_x5 + 10 + text_w5 and text_y5 - 10 < event.pos[1] < text_y5 + 10 + text_h5:
-                return direction, 1
             elif event.type == pygame.MOUSEBUTTONDOWN and text_x3 - 10 < event.pos[
                 0] < text_x3 + 10 + text_w3 and text_y3 - 10 < event.pos[1] < text_y3 + 10 + text_h3:
                 name = ''
